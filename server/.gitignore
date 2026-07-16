@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+# Service-account keys — NEVER commit these
+project-*.json
+*-credentials.json
+*.key.json

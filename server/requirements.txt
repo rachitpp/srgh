@@ -1,0 +1,26 @@
+# ── BioLab AI backend dependencies ───────────────────────────────────────────
+# Install with:  pip install -r requirements.txt
+
+# Web framework + server
+fastapi
+uvicorn[standard]
+python-multipart          # required by FastAPI for Form()/UploadFile
+pydantic
+
+# Data handling
+pandas
+openpyxl                  # .xlsx reading for pandas.read_excel
+xlrd                      # .xls reading for pandas.read_excel
+
+# Gemini via Vertex AI (the new unified SDK — provides `from google import genai`)
+google-genai
+
+# Database drivers
+mysql-connector-python
+psycopg2-binary
+
+# MCP server (SSE tools)
+fastmcp
+
+# Optional: load environment variables from a .env file (see .env.example)
+python-dotenv

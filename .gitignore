@@ -1,0 +1,34 @@
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output ──────────────────────────────────────────────────────────────
+dist/
+
+# ── Environment & secrets ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+# Google service-account keys — NEVER commit (safety net; also in server/.gitignore)
+project-*.json
+*-credentials.json
+*.key.json
+*.pem
+
+# ── Python backend ────────────────────────────────────────────────────────────
+.venv/
+server/.venv/
+__pycache__/
+*.pyc
+
+# ── Real hospital data — do NOT publish ──────────────────────────────────────
+*.xlsx
+*.xls
+*.csv
+
+# ── Local tool settings ───────────────────────────────────────────────────────
+.claude/settings.local.json
+
+# ── OS / editor noise ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log

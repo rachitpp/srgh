@@ -1,0 +1,8 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Slightly larger base type — every rem-based (Tailwind) size scales from this. */
+html {
+  font-size: 17px;
+}
