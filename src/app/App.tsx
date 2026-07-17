@@ -8,11 +8,15 @@ import {
   FileSpreadsheet,
   FlaskConical,
   Info,
+  LayoutDashboard,
   Loader2,
+  MessageSquare,
   Microscope,
+  PanelLeft,
+  PanelLeftClose,
+  Pin,
   Send,
   Server,
-  Settings,
   Table,
   Trash2,
   Upload,
@@ -49,6 +53,18 @@ interface LoadedInfo {
   source: "file" | "db";
   tables: string[];
   rows: number;
+}
+
+// A visual pinned onto the free-form dashboard canvas. Position/size are stored
+// in pixels (snapped to a grid) and persisted to localStorage — moving/resizing
+// a widget only changes layout, never the underlying chart data.
+interface Widget {
+  wid: string;
+  visualId: string; // "card" | "bar" | "pie" | "line" | "table"
+  chartHtml: string;
+  title: string;
+  color: string;    // metric-domain accent, shown as a dot in the widget header
+  x: number; y: number; w: number; h: number;
 }
 
 interface DbConfig {
@@ -118,13 +134,22 @@ function TypingDots() {
 
 // Renders raw HTML returned by the backend and (re-)executes any <script> tags
 // so Plotly.newPlot(...) actually runs. Setting innerHTML alone won't run scripts.
-function HtmlVisual({ visual }: { visual: Visual }) {
+function HtmlVisual({ visual, bare = false, fill = false }: { visual: Visual; bare?: boolean; fill?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.innerHTML = visual.chart_html;
+    // Re-key the chart id to be unique to THIS mounted instance. The server
+    // ships each chart with an id like `chart_ab12` referenced both by the div
+    // and the Plotly.newPlot(...) call. If the same visual is rendered twice
+    // (e.g. once in chat and once pinned to the dashboard), getElementById would
+    // resolve both scripts to the first div — so we rewrite every occurrence of
+    // the original id token to a fresh one before injecting.
+    let html = visual.chart_html;
+    const idMatch = html.match(/chart_[\w-]+/);
+    if (idMatch) html = html.split(idMatch[0]).join(`chart_${uid()}`);
+    el.innerHTML = html;
     el.querySelectorAll("script").forEach((old) => {
       const s = document.createElement("script");
       old.getAttributeNames().forEach((n) => {
@@ -136,25 +161,70 @@ function HtmlVisual({ visual }: { visual: Visual }) {
     });
   }, [visual.chart_html]);
 
+  // Reflow the chart when its CONTAINER resizes. Plotly's `responsive:true` only
+  // listens to window-resize events, so dragging a dashboard card's corner (which
+  // changes the div but not the window) would otherwise leave the plot frozen at
+  // its original size. A ResizeObserver watches the div directly and asks Plotly
+  // to re-fit on every size change.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !fill) return;
+    const Plotly = (window as any).Plotly;
+    const ro = new ResizeObserver(() => {
+      const plot = el.querySelector(".js-plotly-plot") as HTMLElement | null;
+      if (plot && Plotly?.Plots?.resize) Plotly.Plots.resize(plot);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fill, visual.chart_html]);
+
   const id = visual.id;
   const isChart = id === "bar" || id === "pie" || id === "line";
-  const height = id === "table" ? 440 : isChart ? 340 : undefined;
+  // fill → the parent (a dashboard cell) controls the size; the chart stretches
+  // to 100% and the ResizeObserver above reflows Plotly to match.
+  const height = fill ? "100%" : id === "table" ? 460 : isChart ? 400 : undefined;
 
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <div ref={ref} style={{ width: "100%", height, minHeight: id === "card" ? 96 : undefined }} />
-    </div>
+  const body = (
+    <div
+      ref={ref}
+      className={fill ? "h-full w-full overflow-auto" : undefined}
+      style={{ width: "100%", height, minHeight: !fill && id === "card" ? 96 : undefined }}
+    />
   );
+  // bare → rendered inside an insight card that already has a border; fill →
+  // rendered inside a dashboard widget shell that owns the chrome.
+  if (bare || fill) return body;
+  return <div className="bg-white border-[1.5px] border-gray-300 rounded-2xl overflow-hidden">{body}</div>;
 }
 
-function AgentMessage({ msg }: { msg: Message }) {
+// Maps an answer to its metric domain so the insight card's tag + accent match
+// the chart colors (same hex values as the sidebar groups / server tokens).
+const METRIC_TAGS: { tag: string; color: string; re: RegExp }[] = [
+  { tag: "TAT",     color: "#996A26", re: /\btat\b|turnaround|delay/i },
+  { tag: "Cost",    color: "#983B40", re: /expense|expenditure|cost|spend/i },
+  { tag: "Revenue", color: "#1A7350", re: /revenue|income|billed|billing|payor|collection/i },
+  { tag: "Service", color: "#0A5F67", re: /test|service|doctor|department|patient|sample|unit/i },
+];
+function detectMetric(text: string) {
+  return METRIC_TAGS.find((m) => m.re.test(text)) ?? { tag: "Insight", color: "#0A5F67" };
+}
+
+// A short label for a pinned widget: the insight sentence trimmed to its first
+// clause, falling back to the metric tag when the answer has no text.
+function pinTitle(text: string, fallback: string) {
+  const t = (text || "").split(/[.\n]/)[0].trim();
+  if (!t) return fallback;
+  return t.length > 60 ? t.slice(0, 57) + "…" : t;
+}
+
+function AgentMessage({ msg, sourceNote, onPin }: { msg: Message; sourceNote?: string; onPin?: (v: Visual, title: string) => void }) {
   if (msg.loading) {
     return (
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: G.brand }}>
           <FlaskConical size={15} className="text-white" />
         </div>
-        <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3">
+        <div className="bg-white border-[1.5px] border-gray-300 rounded-2xl rounded-tl-sm px-4 py-3">
           <TypingDots />
         </div>
       </div>
@@ -175,19 +245,52 @@ function AgentMessage({ msg }: { msg: Message }) {
     );
   }
 
+  // Insight card — every answer framed like an analytics product: metric tag +
+  // timestamp header, the insight sentence as the headline, visuals in the body,
+  // and a quiet data-source footer.
+  const metric = detectMetric(msg.text || "");
+  const hasVisuals = !!msg.visuals?.length;
   return (
     <div className="flex items-start gap-3">
       <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: G.brand }}>
         <FlaskConical size={15} className="text-white" />
       </div>
-      <div className="flex-1 min-w-0 space-y-3 max-w-2xl">
-        {msg.text && (
-          <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3.5">
-            <p className="text-[15px] text-gray-700 leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+      <div className="flex-1 min-w-0 max-w-4xl">
+        <div className="bg-white border-[1.5px] border-gray-300 rounded-2xl rounded-tl-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 pt-3">
+            <span
+              className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-md"
+              style={{ color: metric.color, background: `${metric.color}14` }}
+            >
+              {metric.tag}
+            </span>
+            <span className="text-[11px] text-gray-400 font-mono">{fmt(msg.timestamp)}</span>
           </div>
-        )}
-        {msg.visuals?.map((v, i) => <HtmlVisual key={i} visual={v} />)}
-        <div className="text-xs text-gray-400 pl-1">{fmt(msg.timestamp)}</div>
+          {msg.text && (
+            <p className="px-4 pt-2.5 pb-3.5 text-[15px] font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">
+              {msg.text}
+            </p>
+          )}
+          {msg.visuals?.map((v, i) => (
+            <div key={i} className="group/vis relative border-t border-gray-200">
+              <HtmlVisual visual={v} bare />
+              {onPin && (
+                <button
+                  onClick={() => onPin(v, pinTitle(msg.text, metric.tag))}
+                  title="Pin to dashboard"
+                  className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg bg-white/90 border-[1.5px] border-gray-300 text-[11px] font-medium text-gray-500 opacity-0 group-hover/vis:opacity-100 hover:text-gray-800 hover:border-gray-300 transition-all backdrop-blur-sm"
+                >
+                  <Pin size={11} /> Pin
+                </button>
+              )}
+            </div>
+          ))}
+          {hasVisuals && sourceNote && (
+            <div className="px-4 py-2 border-t border-gray-200">
+              <p className="text-[11px] text-gray-400 font-mono">{sourceNote}</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -202,7 +305,7 @@ function UserMessage({ msg }: { msg: Message }) {
         </div>
         <div className="text-xs text-gray-400 text-right pr-1">{fmt(msg.timestamp)}</div>
       </div>
-      <div className="w-9 h-9 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold text-gray-500">U</div>
+      <div className="w-9 h-9 rounded-2xl bg-gray-100 border-[1.5px] border-gray-300 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold text-gray-500">U</div>
     </div>
   );
 }
@@ -213,7 +316,7 @@ function ServerStatusPanel({ online }: { online: boolean | null }) {
   const dot = online === null ? "#f59e0b" : online ? "#10b981" : "#ef4444";
   const lbl = online === null ? "Checking…" : online ? "Connected" : "Offline";
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+    <div className="rounded-2xl border-[1.5px] border-gray-300 bg-white overflow-hidden">
       <div className="px-4 py-3.5 flex items-center gap-2.5 border-b border-gray-50">
         <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#f2f3f4" }}>
           <Server size={14} className="text-gray-500" />
@@ -286,7 +389,7 @@ function UploadPanel({ onLoaded, onCleared }: { onLoaded: (i: LoadedInfo) => voi
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+    <div className="rounded-2xl border-[1.5px] border-gray-300 bg-white overflow-hidden">
       <div className="px-4 py-3.5 flex items-center gap-2.5 border-b border-gray-50">
         <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#f2f3f4" }}>
           <FileSpreadsheet size={14} className="text-gray-500" />
@@ -310,7 +413,7 @@ function UploadPanel({ onLoaded, onCleared }: { onLoaded: (i: LoadedInfo) => voi
             onDragLeave={() => setDragging(false)}
             onClick={() => inputRef.current?.click()}
             className="border-2 border-dashed rounded-2xl px-4 py-7 flex flex-col items-center gap-2.5 cursor-pointer transition-all duration-200"
-            style={{ borderColor: dragging ? "#374151" : "#d7dadd", background: dragging ? "rgba(55,65,81,0.05)" : "rgba(55,65,81,0.02)" }}
+            style={{ borderColor: dragging ? "#374151" : "#d0d5db", background: dragging ? "rgba(55,65,81,0.05)" : "rgba(55,65,81,0.02)" }}
           >
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: G.brandSoft }}>
               <Upload size={18} className="text-gray-600" />
@@ -350,7 +453,7 @@ function UploadPanel({ onLoaded, onCleared }: { onLoaded: (i: LoadedInfo) => voi
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center gap-2.5 bg-gray-50/60 border border-gray-100 rounded-xl px-3 py-2.5">
+            <div className="flex items-center gap-2.5 bg-gray-50/60 border border-gray-200 rounded-xl px-3 py-2.5">
               <FileSpreadsheet size={14} className="text-gray-500 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-700 truncate">{file?.name}</p>
@@ -422,7 +525,7 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
   const lbl: Record<DbStatus, string> = { disconnected: "Not connected", connecting: "Connecting…", connected: `${tables.length} tables found`, error: "Failed" };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+    <div className="rounded-2xl border-[1.5px] border-gray-300 bg-white overflow-hidden">
       <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/40 transition-colors">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: G.brandSoft }}>
@@ -445,7 +548,7 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
             <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
               <select value={cfg.db_type} onChange={(e) => setCfg({ ...cfg, db_type: e.target.value as DbType, port: e.target.value === "postgres" ? "5432" : "3306" })}
-                className="w-full bg-gray-50/50 border border-gray-100 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-gray-300">
+                className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-gray-300">
                 <option value="mysql">MySQL</option>
                 <option value="postgres">PostgreSQL</option>
               </select>
@@ -460,7 +563,7 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
               <div key={key}>
                 <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
                 <input type={type ?? "text"} value={(cfg as any)[key]} onChange={(e) => setCfg({ ...cfg, [key]: e.target.value })}
-                  className="w-full bg-gray-50/50 border border-gray-100 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-gray-300"
+                  className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-gray-300"
                   placeholder={type === "password" ? "••••••••" : label.toLowerCase()} />
               </div>
             ))}
@@ -492,7 +595,7 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
             </button>
             {status === "connected" && (
               <button onClick={loadAll} disabled={loadingAll}
-                className="w-full py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                className="w-full py-2 text-sm font-semibold text-gray-600 border-[1.5px] border-gray-300 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
                 {loadingAll && <Loader2 size={13} className="animate-spin" />}
                 {loadingAll ? "Loading…" : "Load all tables"}
               </button>
@@ -506,34 +609,51 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
 
 // ── empty state ───────────────────────────────────────────────────────────────
 
-// One+ suggestion per loaded sheet, chosen so the routing produces a mix of
-// visuals: pie (part-of-whole), line/bar (trend & ranking), card (single KPI),
-// and table (queries containing a TABLE_KEYWORD like "list all" / "show all").
-const SUGGESTIONS = [
-  // lab_income_biochem_2025 — Revenue
-  "Revenue share of OPD vs IPD patients",        // → pie
-  "Monthly revenue trend for 2025",              // → line
-  // lab_sevice_details — Service & TAT
-  "Average turnaround time (TAT)",               // → card
-  "Which department has the longest TAT?",       // → bar
-  // expense_biochem_2024_2025 — Cost
-  "Expense breakdown by category",               // → pie
-  "Compare monthly laboratory expenses",         // → line / bar
-  // lab_testset_master_biochem — Test master
-  "List all biochemistry test sets",             // → table
-  // careprov — Doctor master
-  "Count of doctors by specialty",               // → pie / bar
-  "Show all active doctors",                     // → table
-  // treating_unit — Department master
-  "List all treating units",                     // → table
-  // costing_format_grouping_master — Finance mapping
-  "List all P&L groups",                         // → table
+// Quick queries grouped by metric domain. Each group's dot color matches the
+// accent the backend uses for that metric's charts (see design tokens in
+// server/main.py), and the queries are phrased to produce a mix of visuals:
+// pie (part-of-whole), line (trend), bar (ranking), card (KPI), table ("list all").
+const QUERY_GROUPS: { label: string; color: string; queries: string[] }[] = [
+  {
+    label: "Revenue", color: "#1A7350",
+    queries: [
+      "Revenue share of OPD vs IPD patients",              // → pie
+      "What is the revenue share by billing payor type?",  // → pie
+      "Monthly revenue trend for 2025",                    // → line
+    ],
+  },
+  {
+    label: "Turnaround Time", color: "#996A26",
+    queries: [
+      "Average turnaround time (TAT)",                     // → card
+      "Which department has the longest TAT?",             // → bar
+    ],
+  },
+  {
+    label: "Cost", color: "#983B40",
+    queries: [
+      "Expense breakdown by category",                     // → bar/pie
+      "Compare monthly laboratory expenses",               // → line
+    ],
+  },
+  {
+    label: "Masters", color: "#0A5F67",
+    queries: [
+      "List all biochemistry test sets",                   // → table
+      "Count of doctors by specialty",                     // → pie
+      "List all treating units",                           // → table
+      "List all P&L groups",                               // → table
+    ],
+  },
 ];
+
+// Flat view (query + its group color) for the empty-state grid.
+const FLAT_SUGGESTIONS = QUERY_GROUPS.flatMap((g) => g.queries.map((q) => ({ q, color: g.color })));
 
 function EmptyState({ hasData, online, onPrompt }: { hasData: boolean; online: boolean | null; onPrompt: (p: string) => void }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-12 text-center">
-      <div className="w-16 h-16 rounded-2xl flex items-center justify-center border border-gray-200 bg-white">
+      <div className="w-16 h-16 rounded-2xl flex items-center justify-center border-[1.5px] border-gray-300 bg-white">
         <Microscope size={30} className="text-gray-700" />
       </div>
       <div>
@@ -548,16 +668,164 @@ function EmptyState({ hasData, online, onPrompt }: { hasData: boolean; online: b
       </div>
       {hasData && (
         <div className="grid grid-cols-2 gap-2.5 w-full max-w-md">
-          {SUGGESTIONS.map((s) => (
-            <button key={s} onClick={() => onPrompt(s)}
-              className="flex items-start gap-2 text-left px-3.5 py-3 rounded-2xl border border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 transition-all duration-150 group">
-              <ChevronRight size={10} className="text-gray-400 mt-0.5 shrink-0 group-hover:text-gray-600 transition-colors" />
-              <span className="text-xs text-gray-600 group-hover:text-gray-800 leading-snug transition-colors">{s}</span>
+          {FLAT_SUGGESTIONS.slice(0, 8).map(({ q, color }) => (
+            <button key={q} onClick={() => onPrompt(q)}
+              className="flex items-start gap-2 text-left px-3.5 py-3 rounded-2xl border-[1.5px] border-gray-300 bg-white hover:border-gray-300 hover:bg-gray-50 transition-all duration-150 group">
+              <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: color }} />
+              <span className="text-xs text-gray-600 group-hover:text-gray-800 leading-snug transition-colors">{q}</span>
             </button>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+// ── dashboard canvas ──────────────────────────────────────────────────────────
+// A PowerBI-style free canvas of pinned visuals. Widgets can be dragged and
+// resized (snapped to a grid) but the operation is purely visual — it never
+// touches the chart data, which lives untouched inside each widget's HTML.
+
+const GRID = 16;      // snap step, px
+const MIN_W = 240;    // smallest a widget can shrink to
+const MIN_H = 140;
+const snap = (n: number) => Math.round(n / GRID) * GRID;
+
+// Sensible starting footprint for a freshly pinned visual, by chart kind.
+function defaultSize(id: string): { w: number; h: number } {
+  if (id === "table") return { w: 576, h: 432 };
+  if (id === "card") return { w: 304, h: 160 };
+  return { w: 448, h: 352 }; // bar / pie / line
+}
+
+function DashWidget({ widget, onChange, onRemove }: { widget: Widget; onChange: (w: Widget) => void; onRemove: () => void }) {
+  // Latest props are read through a ref so the window listeners (attached once)
+  // always see current values without re-subscribing mid-drag.
+  const latest = useRef({ widget, onChange });
+  latest.current = { widget, onChange };
+  const drag = useRef<{ mode: "move" | "resize"; px: number; py: number; orig: Widget } | null>(null);
+
+  useEffect(() => {
+    function onMove(e: PointerEvent) {
+      const s = drag.current;
+      if (!s) return;
+      const dx = e.clientX - s.px;
+      const dy = e.clientY - s.py;
+      if (s.mode === "move") {
+        latest.current.onChange({ ...s.orig, x: Math.max(0, snap(s.orig.x + dx)), y: Math.max(0, snap(s.orig.y + dy)) });
+      } else {
+        latest.current.onChange({ ...s.orig, w: Math.max(MIN_W, snap(s.orig.w + dx)), h: Math.max(MIN_H, snap(s.orig.h + dy)) });
+      }
+    }
+    function onUp() { drag.current = null; document.body.style.userSelect = ""; }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
+  }, []);
+
+  function begin(mode: "move" | "resize", e: React.PointerEvent) {
+    e.preventDefault();
+    drag.current = { mode, px: e.clientX, py: e.clientY, orig: latest.current.widget };
+    document.body.style.userSelect = "none";
+  }
+
+  return (
+    <div
+      className="absolute flex flex-col bg-white border-[1.5px] border-gray-300 rounded-2xl shadow-sm transition-shadow duration-150 hover:shadow-md overflow-hidden"
+      style={{ left: widget.x, top: widget.y, width: widget.w, height: widget.h }}
+    >
+      <div
+        onPointerDown={(e) => begin("move", e)}
+        className="shrink-0 flex items-center justify-between gap-2 px-3 h-9 border-b border-gray-200 bg-gray-50/70 cursor-move select-none"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: widget.color || "#0A5F67" }} />
+          <span className="truncate text-[11px] font-semibold text-gray-600">{widget.title}</span>
+        </div>
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onRemove}
+          title="Remove from dashboard"
+          className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+        >
+          <X size={13} />
+        </button>
+      </div>
+      <div className="flex-1 min-h-0 p-1">
+        <HtmlVisual visual={{ id: widget.visualId, chart_html: widget.chartHtml }} fill />
+      </div>
+      {/* resize handle */}
+      <div
+        onPointerDown={(e) => begin("resize", e)}
+        className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
+        style={{ background: "linear-gradient(135deg, transparent 50%, rgba(107,114,128,0.35) 50%)" }}
+      />
+    </div>
+  );
+}
+
+function Dashboard({ widgets, setWidgets }: { widgets: Widget[]; setWidgets: React.Dispatch<React.SetStateAction<Widget[]>> }) {
+  const update = (w: Widget) => setWidgets((prev) => prev.map((x) => (x.wid === w.wid ? w : x)));
+  const remove = (wid: string) => setWidgets((prev) => prev.filter((x) => x.wid !== wid));
+
+  if (widgets.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 text-center" style={{ background: G.page }}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center border-[1.5px] border-gray-300 bg-white">
+          <LayoutDashboard size={28} className="text-gray-400" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 mb-1.5">Your dashboard is empty</h2>
+          <p className="text-sm text-gray-500 max-w-sm leading-relaxed">
+            In the <span className="font-semibold">Chat</span> tab, hover any chart or table and click{" "}
+            <span className="inline-flex items-center gap-1 font-medium text-gray-600"><Pin size={11} /> Pin</span> to
+            place it here, then drag and resize it freely.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const canvasH = Math.max(600, ...widgets.map((w) => w.y + w.h + 80));
+  return (
+    <div className="flex-1 overflow-auto p-6" style={{ background: G.page }}>
+      {/* dot grid — signals a movable canvas and makes the snap-to-grid legible */}
+      <div
+        className="relative mx-auto"
+        style={{
+          minHeight: canvasH,
+          maxWidth: 1400,
+          backgroundImage: "radial-gradient(circle, rgba(55,65,81,0.12) 1px, transparent 1px)",
+          backgroundSize: `${GRID}px ${GRID}px`,
+        }}
+      >
+        {widgets.map((w) => (
+          <DashWidget key={w.wid} widget={w} onChange={update} onRemove={() => remove(w.wid)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ViewTab({ active, onClick, icon: Icon, label, badge }: { active: boolean; onClick: () => void; icon: typeof MessageSquare; label: string; badge?: number }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+      style={{
+        background: active ? "#ffffff" : "transparent",
+        color: active ? "#111827" : "#6b7280",
+        boxShadow: active ? "0 1px 2px rgba(0,0,0,0.06)" : undefined,
+      }}
+    >
+      <Icon size={14} />
+      {label}
+      {badge ? (
+        <span className="ml-0.5 min-w-4 h-4 px-1 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold flex items-center justify-center tabular-nums">
+          {badge}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -570,8 +838,25 @@ export default function App() {
   const [online, setOnline] = useState<boolean | null>(null);
   const [dbStatus, setDbStatus] = useState<DbStatus>("disconnected");
   const [isLoading, setIsLoading] = useState(false);
+  const [view, setView] = useState<"chat" | "dashboard">("chat");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Pinned dashboard widgets, restored from localStorage so a board survives a
+  // reload. Layout only — chart data always comes from the stored HTML.
+  const [widgets, setWidgets] = useState<Widget[]>(() => {
+    try { return JSON.parse(localStorage.getItem("sgrh-dashboard") || "[]"); } catch { return []; }
+  });
+  useEffect(() => { localStorage.setItem("sgrh-dashboard", JSON.stringify(widgets)); }, [widgets]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Pin a chat visual onto the dashboard canvas, stacked below existing widgets.
+  const pinVisual = useCallback((v: Visual, title: string) => {
+    setWidgets((prev) => {
+      const y = prev.length ? Math.max(...prev.map((w) => w.y + w.h)) + GRID : GRID;
+      const color = detectMetric(title).color;
+      return [...prev, { wid: uid(), visualId: v.id, chartHtml: v.chart_html, title, color, x: GRID, y, ...defaultSize(v.id) }];
+    });
+  }, []);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -630,14 +915,23 @@ export default function App() {
   function onLoaded(info: LoadedInfo) { setLoaded(info); }
   function onCleared() { setLoaded(null); }
 
+  // Clearing chat and clearing the dashboard are independent — each only wipes
+  // its own view, never the other.
+  function clearChat() {
+    if (messages.length && confirm("Clear the current conversation? Pinned dashboard charts are not affected.")) setMessages([]);
+  }
+  function clearDashboard() {
+    if (widgets.length && confirm("Remove all charts from the dashboard? Your chat history is not affected.")) setWidgets([]);
+  }
+
   const hasData = !!loaded;
   const canSend = online !== false;
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: G.page }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif", background: G.page }}>
 
       {/* header */}
-      <header className="shrink-0 border-b border-gray-200 bg-white flex items-center justify-between px-6 h-16">
+      <header className="shrink-0 border-b border-gray-300 bg-white flex items-center justify-between px-6 h-16">
         <div className="flex items-center gap-3.5">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: G.brand }}>
             <FlaskConical size={16} className="text-white" />
@@ -647,37 +941,64 @@ export default function App() {
           </div>
         </div>
 
+        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+          <ViewTab active={view === "chat"} onClick={() => setView("chat")} icon={MessageSquare} label="Chat" />
+          <ViewTab active={view === "dashboard"} onClick={() => setView("dashboard")} icon={LayoutDashboard} label="Dashboard" badge={widgets.length} />
+        </div>
+
         <div className="flex items-center gap-3">
-          {hasData && (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-full">
-              <CheckCircle2 size={11} />
-              {loaded!.tables.length} {loaded!.tables.length === 1 ? "table" : "tables"} · {loaded!.rows.toLocaleString()} rows
-            </span>
-          )}
-          {dbStatus === "connected" && (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />DB Live
-            </span>
-          )}
-          <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border"
-            style={{
-              color: online ? "#374151" : "#b91c1c",
-              background: online ? "#f3f4f6" : "#fef2f2",
-              borderColor: online ? "#e5e7eb" : "#fee2e2",
-            }}>
-            <Server size={10} />{online === null ? "…" : online ? "AI Online" : "AI Offline"}
-          </span>
-          <button className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-            <Settings size={15} />
-          </button>
+          {/* Single consolidated status — quiet when everything is fine, red only
+              when the backend is down. Details live in the hover tooltip. */}
+          {(() => {
+            const offline = online === false;
+            const dot = offline ? "#dc2626" : online === null ? "#9ca3af" : hasData ? "#059669" : "#9ca3af";
+            const label =
+              online === null ? "Checking…"
+              : offline ? "Backend offline"
+              : hasData ? `${loaded!.tables.length} ${loaded!.tables.length === 1 ? "table" : "tables"} · ${loaded!.rows.toLocaleString()} rows`
+              : "Connected · no data loaded";
+            const detail = [
+              `AI backend: ${online === null ? "checking" : online ? "online" : "offline"}`,
+              hasData ? `Source: ${loaded!.source === "db" ? "database" : "file upload"}` : "No dataset loaded",
+              dbStatus === "connected" ? "Database: live" : null,
+            ].filter(Boolean).join("\n");
+            return (
+              <span
+                title={detail}
+                className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border cursor-default tabular-nums"
+                style={{
+                  color: offline ? "#b91c1c" : "#4b5563",
+                  background: offline ? "#fef2f2" : "#ffffff",
+                  borderColor: offline ? "#fecaca" : "#e5e7eb",
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: dot }} />
+                {label}
+              </span>
+            );
+          })()}
         </div>
       </header>
 
       {/* body */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
 
-        {/* sidebar */}
-        <aside className="w-72 shrink-0 border-r border-gray-200 bg-white flex flex-col p-4 gap-5 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
+        {/* sidebar — collapsible so the dashboard can use the full width. The
+            outer wrapper animates its width so collapse/expand slides smoothly;
+            the inner <aside> keeps a fixed width so its contents don't reflow
+            mid-animation. */}
+        <div
+          className="shrink-0 bg-white overflow-hidden transition-[width] duration-300 ease-in-out"
+          style={{ width: sidebarOpen ? "18rem" : 0 }}
+        >
+        <aside className="relative w-72 h-full flex flex-col p-4 gap-5 overflow-y-auto border-r border-gray-300" style={{ scrollbarWidth: "none" }}>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            title="Hide sidebar"
+            className="absolute top-2 right-2 z-10 w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+          >
+            <PanelLeftClose size={18} />
+          </button>
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">Data Sources</p>
             <div className="space-y-3">
@@ -689,20 +1010,29 @@ export default function App() {
           {hasData && (
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">Quick Queries</p>
-              <div className="space-y-1">
-                {SUGGESTIONS.map((s) => (
-                  <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }}
-                    className="w-full flex items-center gap-2 text-left px-3.5 py-2.5 rounded-xl text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors group">
-                    <ChevronRight size={11} className="text-gray-400 group-hover:text-gray-600 transition-colors shrink-0" />
-                    {s}
-                  </button>
+              <div className="space-y-4">
+                {QUERY_GROUPS.map((g) => (
+                  <div key={g.label}>
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 px-1 mb-1">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: g.color }} />
+                      {g.label}
+                    </p>
+                    <div className="space-y-0.5">
+                      {g.queries.map((s) => (
+                        <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }}
+                          className="w-full text-left pl-4 pr-2 py-2 rounded-lg text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
           <div className="mt-auto">
-            <div className="rounded-2xl p-4 border border-gray-100" style={{ background: G.brandSoft }}>
+            <div className="rounded-2xl p-4 border border-gray-200" style={{ background: G.brandSoft }}>
               <p className="text-xs font-bold text-gray-700 mb-2.5">Session Info</p>
               <div className="space-y-1.5 text-xs text-gray-600/80 font-mono">
                 <div className="flex justify-between"><span>Engine</span><span>Gemini · Vertex</span></div>
@@ -712,23 +1042,72 @@ export default function App() {
             </div>
           </div>
         </aside>
+        </div>
 
         {/* main */}
         <main className="flex-1 flex flex-col overflow-hidden">
+          {/* section toolbar — gives the view-scoped Clear action a fixed home
+              so it never overlaps the conversation or dashboard content. Each
+              button only wipes its own section, never the other. The reopen-
+              sidebar button also lives here (when collapsed) so it can't overlap
+              the section label. */}
+          <div className="shrink-0 h-11 border-b border-gray-200 bg-white flex items-center justify-between px-4">
+            <div className="flex items-center gap-2">
+              {!sidebarOpen && (
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  title="Show sidebar"
+                  className="-ml-1.5 w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                >
+                  <PanelLeft size={16} />
+                </button>
+              )}
+              <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                {view === "chat" ? "Conversation" : "Dashboard"}
+              </span>
+            </div>
+            {view === "chat" ? (
+              <button
+                onClick={clearChat}
+                disabled={!messages.length}
+                title="Clear conversation"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:hover:text-gray-500 disabled:hover:bg-transparent"
+              >
+                <Trash2 size={12} /> Clear chat
+              </button>
+            ) : (
+              <button
+                onClick={clearDashboard}
+                disabled={!widgets.length}
+                title="Clear dashboard"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:hover:text-gray-500 disabled:hover:bg-transparent"
+              >
+                <Trash2 size={12} /> Clear dashboard
+              </button>
+            )}
+          </div>
+          {view === "dashboard" ? (
+            <Dashboard widgets={widgets} setWidgets={setWidgets} />
+          ) : (
+          <>
           <div className="flex-1 overflow-y-auto px-8 py-8 space-y-6" style={{ scrollbarWidth: "none" }}>
             {messages.length === 0
               ? <EmptyState hasData={hasData} online={online} onPrompt={submitQuery} />
               : messages.map((msg) =>
                   msg.role === "user"
                     ? <UserMessage key={msg.id} msg={msg} />
-                    : <AgentMessage key={msg.id} msg={msg} />
+                    : <AgentMessage key={msg.id} msg={msg} onPin={pinVisual} sourceNote={
+                        loaded
+                          ? `${loaded.source === "db" ? "database" : "file"} · ${loaded.tables.length} ${loaded.tables.length === 1 ? "table" : "tables"} · ${loaded.rows.toLocaleString()} rows`
+                          : undefined
+                      } />
                 )
             }
             <div ref={bottomRef} />
           </div>
 
           {/* input bar */}
-          <div className="shrink-0 border-t border-gray-200 bg-white px-6 py-4">
+          <div className="shrink-0 border-t border-gray-300 bg-white px-6 py-4">
             {online === false && (
               <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-2.5 mb-3">
                 <Server size={12} className="shrink-0 text-amber-500" />
@@ -744,7 +1123,7 @@ export default function App() {
             )}
             <div
               className="flex items-end gap-2 border rounded-2xl bg-white transition-all duration-200"
-              style={{ borderColor: canSend && input ? "rgba(55,65,81,0.35)" : "rgba(55,65,81,0.12)", boxShadow: canSend && input ? "0 0 0 3px rgba(55,65,81,0.08)" : undefined }}
+              style={{ borderColor: canSend && input ? "rgba(55,65,81,0.4)" : "rgba(55,65,81,0.22)", boxShadow: canSend && input ? "0 0 0 3px rgba(55,65,81,0.08)" : undefined }}
             >
               <textarea ref={inputRef} value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -768,11 +1147,9 @@ export default function App() {
                 </button>
               </div>
             </div>
-            <p className="text-xs text-center text-gray-400 mt-2.5">
-              <kbd className="font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md text-[10px]">Enter</kbd> to send ·{" "}
-              <kbd className="font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md text-[10px]">Shift+Enter</kbd> for new line
-            </p>
           </div>
+          </>
+          )}
         </main>
       </div>
     </div>

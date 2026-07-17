@@ -48,7 +48,7 @@ app.add_middleware(
 # Keep frontend (App.js) and backend visually in sync — same hex values.
 INK = "#101826"
 SLATE_TEXT = "#47566B"
-SLATE_BORDER = "#D9E0E7"
+SLATE_BORDER = "#CFD6DE"
 BG_TINT = "#F3F5F7"
 SURFACE = "#FFFFFF"
 TEAL = "#0A5F67"      # Service

@@ -6,3 +6,14 @@
 html {
   font-size: 17px;
 }
+
+/* Unified typography — matches the backend-rendered visuals (FONT_UI / FONT_MONO
+   in server/main.py), so app chrome and AI-generated tables/cards read as one product. */
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+.font-mono,
+kbd,
+code {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace !important;
+}
