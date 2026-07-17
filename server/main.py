@@ -28,7 +28,7 @@ app = FastAPI()
 # ── Configuration (env-driven, with the original project defaults) ────────────
 CREDENTIALS_PATH = os.environ.get(
     "GOOGLE_APPLICATION_CREDENTIALS",
-    r"D:/SGRH AI AGENT/server/project-a7f31721-c4d9-43f4-a9b-3c957073bdc6.json",
+    r"C:\Users\Rachit\Music\Biometric Laboratory Dashboard (1)\server\project-a7f31721-c4d9-43f4-a9b-735f6ff27b0a.json",
 )
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = CREDENTIALS_PATH
 GCP_PROJECT = os.environ.get("GCP_PROJECT", "project-a7f31721-c4d9-43f4-a9b")
@@ -548,8 +548,10 @@ def build_table_html(df: pd.DataFrame) -> str:
     cols = list(df.columns)
     numeric_cols = set(df.select_dtypes(include="number").columns)
 
+    # Numeric columns are right-aligned so digits line up by place value — the
+    # standard convention for professional data tables.
     header_cells = "".join(
-        f'<th style="padding:10px 14px;text-align:left;white-space:nowrap;'
+        f'<th style="padding:10px 14px;text-align:{"right" if col in numeric_cols else "left"};white-space:nowrap;'
         f'font-family:{FONT_UI};font-size:11px;font-weight:600;letter-spacing:0.06em;'
         f'text-transform:uppercase;color:#ffffff;border-right:1px solid rgba(255,255,255,0.12);">{col}</th>'
         for col in cols
@@ -564,6 +566,7 @@ def build_table_html(df: pd.DataFrame) -> str:
         cells = "".join(
             f'<td style="padding:8px 14px;border-right:2px solid {SLATE_BORDER};'
             f'border-bottom:2px solid {SLATE_BORDER};white-space:nowrap;'
+            f'text-align:{"right" if col in numeric_cols else "left"};'
             f'font-family:{FONT_MONO if col in numeric_cols else FONT_UI};'
             f'font-size:12.5px;color:{INK if col in numeric_cols else SLATE_TEXT};">'
             f'{str(row[col]) if pd.notna(row[col]) else ""}</td>'
@@ -899,7 +902,11 @@ CHART HTML RULES:
 20. Each visual must have a unique UID — never reuse the same id.
 21. Do NOT add any HTML outside the div+script pair for charts.
 22. For bar charts set marker.color to the accent color matching the metric (Cost={ROSE}, Revenue={GREEN},
-    Service/other={TEAL}, TAT={AMBER}). For pie charts use hole:0.35, textinfo:"percent",
+    Service/other={TEAL}, TAT={AMBER}). ALSO make each bar's value readable at a glance: set
+    text to the formatted values (currency/number, matching the "text" rules above), textposition:"outside",
+    cliponaxis:false, and textfont:{{family:"{FONT_MONO}",size:11,color:"{INK}"}}. Because the labels sit
+    outside the bars, for bar charts ONLY override the right margin to margin.r:70 so the labels are not clipped.
+    For pie charts use hole:0.35, textinfo:"percent",
     textposition:"inside", insidetextorientation:"horizontal", automargin:true, and
     marker.colors:["{TEAL}","{INK}","{AMBER}","{ROSE}","{GREEN}","#5F708A","{SLATE_TEXT}"].
     Category names belong in the legend ONLY — never as outside labels with connector lines.

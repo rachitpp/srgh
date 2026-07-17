@@ -514,7 +514,10 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
 
   function setStat(s: DbStatus) { setStatus(s); onStatusChange(s); }
   function body() {
-    return { db_type: cfg.db_type, host: cfg.host, port: Number(cfg.port), user: cfg.user, password: cfg.password, database: cfg.database };
+    // Trim host/user/database so a stray leading/trailing space can't break the
+    // connection — Postgres' pg_hba matching is exact, so "staging " ≠ "staging".
+    // Password is left untouched (spaces can be significant in a password).
+    return { db_type: cfg.db_type, host: cfg.host.trim(), port: Number(cfg.port), user: cfg.user.trim(), password: cfg.password, database: cfg.database.trim() };
   }
 
   async function connect() {
