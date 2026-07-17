@@ -46,10 +46,10 @@ app.add_middleware(
 
 # ── Design tokens shared by every server-rendered visual (table, cards) ──────
 # Keep frontend (App.js) and backend visually in sync — same hex values.
-INK = "#101826"
-SLATE_TEXT = "#47566B"
-SLATE_BORDER = "#CFD6DE"
-BG_TINT = "#F3F5F7"
+INK = "#292524"
+SLATE_TEXT = "#33302D"
+SLATE_BORDER = "#E7E3DD"
+BG_TINT = "#F4F1EC"
 SURFACE = "#FFFFFF"
 TEAL = "#0A5F67"      # Service
 ROSE = "#983B40"      # Cost
@@ -562,8 +562,8 @@ def build_table_html(df: pd.DataFrame) -> str:
     for i, (_, row) in enumerate(df.iterrows()):
         bg = SURFACE if i % 2 == 0 else BG_TINT
         cells = "".join(
-            f'<td style="padding:8px 14px;border-right:1px solid {SLATE_BORDER};'
-            f'border-bottom:1px solid {SLATE_BORDER};white-space:nowrap;'
+            f'<td style="padding:8px 14px;border-right:2px solid {SLATE_BORDER};'
+            f'border-bottom:2px solid {SLATE_BORDER};white-space:nowrap;'
             f'font-family:{FONT_MONO if col in numeric_cols else FONT_UI};'
             f'font-size:12.5px;color:{INK if col in numeric_cols else SLATE_TEXT};">'
             f'{str(row[col]) if pd.notna(row[col]) else ""}</td>'

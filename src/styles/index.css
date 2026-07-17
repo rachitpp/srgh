@@ -11,9 +11,39 @@ html {
    in server/main.py), so app chrome and AI-generated tables/cards read as one product. */
 body {
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  /* Slightly heavier baseline so default-weight UI text reads bolder / more
+     present. Explicit medium/semibold/bold classes are unaffected. */
+  font-weight: 500;
 }
 .font-mono,
 kbd,
 code {
   font-family: 'IBM Plex Mono', ui-monospace, monospace !important;
+}
+
+/* Scrollbars — the app hides some via inline `scrollbar-width: none` (Firefox
+   only). Chromium ignores that, so its default chunky bars leak through. These
+   rules give every other scroll area a thin, sober bar and honour the hide
+   intent in Chromium too, so the look is consistent across browsers. */
+* {
+  scrollbar-width: thin;                              /* Firefox */
+  scrollbar-color: rgba(41, 37, 36, 0.28) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(41, 37, 36, 0.22);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(41, 37, 36, 0.4);
+}
+/* Elements that opt out via inline scrollbar-width:none stay fully hidden. */
+[style*="scrollbar-width: none"]::-webkit-scrollbar {
+  display: none;
 }

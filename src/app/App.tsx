@@ -81,9 +81,12 @@ interface DbConfig {
 // Sober, neutral palette — flat dark charcoal accent, plain light-grey surfaces.
 // No gradients, no glow: understated and professional.
 const G = {
-  brand: "#24292f",
-  brandSoft: "#f1f2f3",
-  page: "#f7f7f8",
+  brand: "#292524",     // warm stone ink — a graphite with a clay undertone
+  brandSoft: "#e7e3dd", // warm greige for icon tiles / soft fills
+  page: "#e8e4de",      // warm canvas so white surfaces read as raised layers
+  accent: "#0f766e",    // clinical teal — the single action/identity accent
+  accentSoft: "#e3efed", // soft teal wash for accented tiles / highlights
+  panel: "#f5f3ef",     // warm off-white for the sidebar, a step below header white
 };
 
 function uid() { return Math.random().toString(36).slice(2, 10); }
@@ -125,7 +128,7 @@ function TypingDots() {
   return (
     <div className="flex items-center gap-1 py-1">
       {[0, 1, 2].map((i) => (
-        <span key={i} className="w-2 h-2 rounded-full bg-gray-400 inline-block animate-bounce"
+        <span key={i} className="w-2 h-2 rounded-full bg-stone-400 inline-block animate-bounce"
           style={{ animationDelay: `${i * 0.15}s` }} />
       ))}
     </div>
@@ -194,7 +197,7 @@ function HtmlVisual({ visual, bare = false, fill = false }: { visual: Visual; ba
   // bare → rendered inside an insight card that already has a border; fill →
   // rendered inside a dashboard widget shell that owns the chrome.
   if (bare || fill) return body;
-  return <div className="bg-white border-[1.5px] border-gray-300 rounded-2xl overflow-hidden">{body}</div>;
+  return <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">{body}</div>;
 }
 
 // Maps an answer to its metric domain so the insight card's tag + accent match
@@ -224,7 +227,7 @@ function AgentMessage({ msg, sourceNote, onPin }: { msg: Message; sourceNote?: s
         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: G.brand }}>
           <FlaskConical size={15} className="text-white" />
         </div>
-        <div className="bg-white border-[1.5px] border-gray-300 rounded-2xl rounded-tl-sm px-4 py-3">
+        <div className="bg-white border border-stone-200 rounded-2xl rounded-tl-sm px-4 py-3">
           <TypingDots />
         </div>
       </div>
@@ -256,7 +259,12 @@ function AgentMessage({ msg, sourceNote, onPin }: { msg: Message; sourceNote?: s
         <FlaskConical size={15} className="text-white" />
       </div>
       <div className="flex-1 min-w-0 max-w-4xl">
-        <div className="bg-white border-[1.5px] border-gray-300 rounded-2xl rounded-tl-sm overflow-hidden">
+        {/* metric-color spine — a quiet accent that colour-codes the answer by
+            domain (matches the tag + the dashboard widget dots) for fast scanning */}
+        <div
+          className="group bg-white border border-stone-200 rounded-2xl rounded-tl-sm overflow-hidden shadow-sm"
+          style={{ borderLeftWidth: 3, borderLeftColor: metric.color }}
+        >
           <div className="flex items-center justify-between px-4 pt-3">
             <span
               className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-md"
@@ -264,30 +272,40 @@ function AgentMessage({ msg, sourceNote, onPin }: { msg: Message; sourceNote?: s
             >
               {metric.tag}
             </span>
-            <span className="text-[11px] text-gray-400 font-mono">{fmt(msg.timestamp)}</span>
+            <span className="text-[11px] text-stone-700 font-mono">{fmt(msg.timestamp)}</span>
           </div>
           {msg.text && (
-            <p className="px-4 pt-2.5 pb-3.5 text-[15px] font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">
+            <p className="px-4 pt-2.5 pb-3.5 text-[15px] font-medium text-stone-900 leading-relaxed whitespace-pre-wrap">
               {msg.text}
             </p>
           )}
-          {msg.visuals?.map((v, i) => (
-            <div key={i} className="group/vis relative border-t border-gray-200">
-              <HtmlVisual visual={v} bare />
-              {onPin && (
-                <button
-                  onClick={() => onPin(v, pinTitle(msg.text, metric.tag))}
-                  title="Pin to dashboard"
-                  className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg bg-white/90 border-[1.5px] border-gray-300 text-[11px] font-medium text-gray-500 opacity-0 group-hover/vis:opacity-100 hover:text-gray-800 hover:border-gray-300 transition-all backdrop-blur-sm"
-                >
-                  <Pin size={11} /> Pin
-                </button>
-              )}
-            </div>
-          ))}
+          {msg.visuals?.map((v, i) => {
+            // Charts get a small inset so they sit framed inside the card;
+            // tables stay full-bleed so wide columns can scroll edge to edge.
+            const isChart = v.id === "bar" || v.id === "pie" || v.id === "line";
+            return (
+              <div key={i} className={`group/vis relative border-t border-stone-100 ${isChart ? "px-3 py-2" : ""}`}>
+                <HtmlVisual visual={v} bare />
+                {onPin && (
+                  <button
+                    onClick={() => onPin(v, pinTitle(msg.text, metric.tag))}
+                    title="Pin to dashboard"
+                    className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg bg-white/90 border border-stone-200 text-[11px] font-medium text-stone-800 opacity-0 group-hover/vis:opacity-100 hover:text-stone-900 hover:border-stone-300 transition-all backdrop-blur-sm"
+                  >
+                    <Pin size={11} /> Pin
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {/* Data-source provenance — the header status pill already shows the
+              live source, so we keep this per-answer note but reveal it only on
+              hover to stop it repeating as noise under every card. */}
           {hasVisuals && sourceNote && (
-            <div className="px-4 py-2 border-t border-gray-200">
-              <p className="text-[11px] text-gray-400 font-mono">{sourceNote}</p>
+            <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr] transition-[grid-template-rows] duration-200">
+              <div className="overflow-hidden">
+                <p className="px-4 pb-2.5 pt-1 text-[11px] text-stone-700 font-mono">{sourceNote}</p>
+              </div>
             </div>
           )}
         </div>
@@ -300,12 +318,14 @@ function UserMessage({ msg }: { msg: Message }) {
   return (
     <div className="flex items-start gap-3 justify-end">
       <div className="max-w-[70%] space-y-1">
-        <div className="rounded-2xl rounded-tr-sm px-4 py-3" style={{ background: G.brand }}>
-          <p className="text-[15px] text-white leading-relaxed">{msg.text}</p>
+        {/* Soft neutral bubble — keeps the person's questions light so the
+            agent's answers (charts, insights) carry the visual weight. */}
+        <div className="rounded-2xl rounded-tr-sm px-4 py-3 bg-stone-100 border border-stone-200">
+          <p className="text-[15px] text-stone-900 leading-relaxed">{msg.text}</p>
         </div>
-        <div className="text-xs text-gray-400 text-right pr-1">{fmt(msg.timestamp)}</div>
+        <div className="text-xs text-stone-700 text-right pr-1">{fmt(msg.timestamp)}</div>
       </div>
-      <div className="w-9 h-9 rounded-2xl bg-gray-100 border-[1.5px] border-gray-300 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold text-gray-500">U</div>
+      <div className="w-9 h-9 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold text-stone-800">U</div>
     </div>
   );
 }
@@ -316,13 +336,13 @@ function ServerStatusPanel({ online }: { online: boolean | null }) {
   const dot = online === null ? "#f59e0b" : online ? "#10b981" : "#ef4444";
   const lbl = online === null ? "Checking…" : online ? "Connected" : "Offline";
   return (
-    <div className="rounded-2xl border-[1.5px] border-gray-300 bg-white overflow-hidden">
-      <div className="px-4 py-3.5 flex items-center gap-2.5 border-b border-gray-50">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#f2f3f4" }}>
-          <Server size={14} className="text-gray-500" />
+    <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden shadow-sm">
+      <div className="px-4 py-3 flex items-center gap-2.5 border-b border-stone-100">
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#efece7" }}>
+          <Server size={14} className="text-stone-800" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800">AI Backend</p>
+          <p className="text-sm font-semibold text-stone-900">AI Backend</p>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: dot }} />
             <span className="text-xs" style={{ color: dot }}>{lbl}</span>
@@ -331,7 +351,7 @@ function ServerStatusPanel({ online }: { online: boolean | null }) {
         {online && <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />}
       </div>
       <div className="px-4 py-3">
-        <p className="text-xs text-gray-400 font-mono truncate">{API_BASE}</p>
+        <p className="text-xs text-stone-700 font-mono truncate">{API_BASE}</p>
         {online === false && (
           <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mt-2">
             <Info size={12} className="shrink-0 mt-0.5 text-amber-500" />
@@ -389,38 +409,38 @@ function UploadPanel({ onLoaded, onCleared }: { onLoaded: (i: LoadedInfo) => voi
   }
 
   return (
-    <div className="rounded-2xl border-[1.5px] border-gray-300 bg-white overflow-hidden">
-      <div className="px-4 py-3.5 flex items-center gap-2.5 border-b border-gray-50">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#f2f3f4" }}>
-          <FileSpreadsheet size={14} className="text-gray-500" />
+    <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden shadow-sm">
+      <div className="px-4 py-3 flex items-center gap-2.5 border-b border-stone-100">
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#efece7" }}>
+          <FileSpreadsheet size={14} className="text-stone-800" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-800">Upload Dataset</p>
-          <p className="text-xs text-gray-400">.xlsx · .xls · .csv</p>
+          <p className="text-sm font-semibold text-stone-900">Upload Dataset</p>
+          <p className="text-xs text-stone-700">.xlsx · .xls · .csv</p>
         </div>
         {columns && (
-          <button onClick={clear} className="text-gray-400 hover:text-red-500 transition-colors">
+          <button onClick={clear} className="text-stone-700 hover:text-red-500 transition-colors">
             <Trash2 size={13} />
           </button>
         )}
       </div>
 
-      <div className="px-4 py-4">
+      <div className="px-4 py-3.5">
         {!file && !columns ? (
           <div
             onDrop={handleDrop}
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
             onClick={() => inputRef.current?.click()}
-            className="border-2 border-dashed rounded-2xl px-4 py-7 flex flex-col items-center gap-2.5 cursor-pointer transition-all duration-200"
-            style={{ borderColor: dragging ? "#374151" : "#d0d5db", background: dragging ? "rgba(55,65,81,0.05)" : "rgba(55,65,81,0.02)" }}
+            className="border-2 border-dashed rounded-xl px-4 py-4 flex flex-col items-center gap-2 cursor-pointer transition-all duration-200"
+            style={{ borderColor: dragging ? "#44403c" : "#d6d3d1", background: dragging ? "rgba(41,37,36,0.05)" : "rgba(41,37,36,0.02)" }}
           >
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: G.brandSoft }}>
-              <Upload size={18} className="text-gray-600" />
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: G.brandSoft }}>
+              <Upload size={17} className="text-stone-800" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-700">Drop your file here</p>
-              <p className="text-xs text-gray-400 mt-0.5">or click to browse</p>
+              <p className="text-sm font-medium text-stone-800">Drop your file here</p>
+              <p className="text-xs text-stone-700 mt-0.5">or click to browse</p>
             </div>
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
           </div>
@@ -429,23 +449,23 @@ function UploadPanel({ onLoaded, onCleared }: { onLoaded: (i: LoadedInfo) => voi
             <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5">
               <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-700 truncate">{file?.name}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-medium text-stone-800 truncate">{file?.name}</p>
+                <p className="text-xs text-stone-800">
                   {tableCount > 1
                     ? `${tableCount} tables · ${rows.toLocaleString()} rows`
                     : `${rows.toLocaleString()} rows · ${columns.length} columns`}
                 </p>
               </div>
             </div>
-            <button onClick={() => setShowPreview((s) => !s)} className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-600 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+            <button onClick={() => setShowPreview((s) => !s)} className="w-full flex items-center justify-between px-3 py-2 text-xs text-stone-800 bg-stone-50 rounded-xl hover:bg-stone-100 transition-colors">
               <span className="font-medium">Preview columns</span>
               <ChevronRight size={12} className={`transition-transform ${showPreview ? "rotate-90" : ""}`} />
             </button>
             {showPreview && (
-              <div className="bg-gray-50 rounded-xl p-3 max-h-40 overflow-y-auto space-y-1" style={{ scrollbarWidth: "thin" }}>
+              <div className="bg-stone-50 rounded-xl p-3 max-h-40 overflow-y-auto space-y-1" style={{ scrollbarWidth: "thin" }}>
                 {columns.map((col) => (
                   <div key={col} className="flex items-center text-xs">
-                    <span className="font-mono text-gray-700 truncate">{col}</span>
+                    <span className="font-mono text-stone-800 truncate">{col}</span>
                   </div>
                 ))}
               </div>
@@ -453,13 +473,13 @@ function UploadPanel({ onLoaded, onCleared }: { onLoaded: (i: LoadedInfo) => voi
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center gap-2.5 bg-gray-50/60 border border-gray-200 rounded-xl px-3 py-2.5">
-              <FileSpreadsheet size={14} className="text-gray-500 shrink-0" />
+            <div className="flex items-center gap-2.5 bg-stone-50/60 border border-stone-200 rounded-xl px-3 py-2.5">
+              <FileSpreadsheet size={14} className="text-stone-800 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-700 truncate">{file?.name}</p>
-                <p className="text-xs text-gray-400">{((file?.size ?? 0) / 1024).toFixed(1)} KB</p>
+                <p className="text-sm font-medium text-stone-800 truncate">{file?.name}</p>
+                <p className="text-xs text-stone-700">{((file?.size ?? 0) / 1024).toFixed(1)} KB</p>
               </div>
-              {!loading && <button onClick={clear} className="text-gray-400 hover:text-gray-600"><X size={13} /></button>}
+              {!loading && <button onClick={clear} className="text-stone-700 hover:text-stone-800"><X size={13} /></button>}
             </div>
             {error && (
               <div className="flex items-center gap-2 text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
@@ -467,11 +487,11 @@ function UploadPanel({ onLoaded, onCleared }: { onLoaded: (i: LoadedInfo) => voi
               </div>
             )}
             {!loading ? (
-              <button onClick={parse} className="w-full py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity" style={{ background: G.brand }}>
+              <button onClick={parse} className="w-full py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity" style={{ background: G.accent }}>
                 Upload & Load
               </button>
             ) : (
-              <button disabled className="w-full py-2.5 text-sm font-semibold text-white rounded-xl opacity-60 flex items-center justify-center gap-2" style={{ background: G.brand }}>
+              <button disabled className="w-full py-2.5 text-sm font-semibold text-white rounded-xl opacity-60 flex items-center justify-center gap-2" style={{ background: G.accent }}>
                 <Loader2 size={13} className="animate-spin" /> Uploading…
               </button>
             )}
@@ -521,34 +541,34 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
     }
   }
 
-  const dot: Record<DbStatus, string> = { disconnected: "#d1d5db", connecting: "#f59e0b", connected: "#10b981", error: "#ef4444" };
+  const dot: Record<DbStatus, string> = { disconnected: "#d6d3d1", connecting: "#f59e0b", connected: "#10b981", error: "#ef4444" };
   const lbl: Record<DbStatus, string> = { disconnected: "Not connected", connecting: "Connecting…", connected: `${tables.length} tables found`, error: "Failed" };
 
   return (
-    <div className="rounded-2xl border-[1.5px] border-gray-300 bg-white overflow-hidden">
-      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/40 transition-colors">
+    <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden shadow-sm">
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-4 py-3 hover:bg-stone-50/40 transition-colors">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: G.brandSoft }}>
-            <Database size={14} className="text-gray-600" />
+            <Database size={14} className="text-stone-800" />
           </div>
           <div className="text-left">
-            <p className="text-sm font-semibold text-gray-800">Database</p>
+            <p className="text-sm font-semibold text-stone-900">Database</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: dot[status] }} />
               <span className="text-xs" style={{ color: dot[status] }}>{lbl[status]}</span>
             </div>
           </div>
         </div>
-        <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown size={14} className={`text-stone-700 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
-        <div className="border-t border-gray-50 px-4 pb-4 pt-3 space-y-3">
-          <div className="grid grid-cols-2 gap-2.5">
+        <div className="border-t border-stone-100 px-4 pb-3.5 pt-2.5 space-y-2.5">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-2">
             <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+              <label className="block text-xs font-medium text-stone-800 mb-0.5">Type</label>
               <select value={cfg.db_type} onChange={(e) => setCfg({ ...cfg, db_type: e.target.value as DbType, port: e.target.value === "postgres" ? "5432" : "3306" })}
-                className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-gray-300">
+                className="w-full bg-stone-50/50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-sm text-stone-800 focus:outline-none focus:border-stone-400">
                 <option value="mysql">MySQL</option>
                 <option value="postgres">PostgreSQL</option>
               </select>
@@ -561,9 +581,9 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
               { label: "Password", key: "password", type: "password" },
             ] as { label: string; key: keyof DbConfig; type?: string }[]).map(({ label, key, type }) => (
               <div key={key}>
-                <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                <label className="block text-xs font-medium text-stone-800 mb-0.5">{label}</label>
                 <input type={type ?? "text"} value={(cfg as any)[key]} onChange={(e) => setCfg({ ...cfg, [key]: e.target.value })}
-                  className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-gray-300"
+                  className="w-full bg-stone-50/50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-sm text-stone-800 focus:outline-none focus:border-stone-400"
                   placeholder={type === "password" ? "••••••••" : label.toLowerCase()} />
               </div>
             ))}
@@ -576,26 +596,26 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
           )}
 
           {status === "connected" && tables.length > 0 && (
-            <div className="bg-gray-50 rounded-xl p-2.5 max-h-32 overflow-y-auto space-y-1" style={{ scrollbarWidth: "thin" }}>
+            <div className="bg-stone-50 rounded-xl p-2.5 max-h-32 overflow-y-auto space-y-1" style={{ scrollbarWidth: "thin" }}>
               {tables.map((t) => (
-                <div key={t} className="flex items-center gap-1.5 text-xs text-gray-600">
-                  <Table size={10} className="text-gray-400 shrink-0" />
+                <div key={t} className="flex items-center gap-1.5 text-xs text-stone-800">
+                  <Table size={10} className="text-stone-700 shrink-0" />
                   <span className="font-mono truncate">{t}</span>
                 </div>
               ))}
             </div>
           )}
 
-          <div className="pt-1 space-y-2">
+          <div className="pt-0.5 space-y-1.5">
             <button onClick={connect} disabled={status === "connecting"}
-              className="w-full py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{ background: G.brand }}>
+              className="w-full py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{ background: G.accent }}>
               {status === "connecting" && <Loader2 size={13} className="animate-spin" />}
               {status === "connecting" ? "Connecting…" : status === "connected" ? "Reconnect" : "Connect"}
             </button>
             {status === "connected" && (
               <button onClick={loadAll} disabled={loadingAll}
-                className="w-full py-2 text-sm font-semibold text-gray-600 border-[1.5px] border-gray-300 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                className="w-full py-2 text-sm font-semibold text-stone-800 border border-stone-200 rounded-xl hover:bg-stone-50 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
                 {loadingAll && <Loader2 size={13} className="animate-spin" />}
                 {loadingAll ? "Loading…" : "Load all tables"}
               </button>
@@ -652,29 +672,36 @@ const FLAT_SUGGESTIONS = QUERY_GROUPS.flatMap((g) => g.queries.map((q) => ({ q, 
 
 function EmptyState({ hasData, online, onPrompt }: { hasData: boolean; online: boolean | null; onPrompt: (p: string) => void }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-12 text-center">
-      <div className="w-16 h-16 rounded-2xl flex items-center justify-center border-[1.5px] border-gray-300 bg-white">
-        <Microscope size={30} className="text-gray-700" />
+    <div className="m-auto flex flex-col items-center gap-6 px-6 py-6 text-center">
+      <div className="flex flex-col items-center gap-5 text-center">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm" style={{ background: G.accentSoft }}>
+          <Microscope size={30} style={{ color: G.accent }} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-stone-900 mb-2 tracking-tight">SGRH Lab Assistant</h2>
+          <p className="text-[15px] text-stone-700 max-w-md leading-relaxed">
+            {online === false
+              ? "Backend offline — start the FastAPI server, then upload a file or connect a database."
+              : hasData
+                ? "Ask anything about your lab data — summaries, KPIs, charts, tables, comparisons, turnaround times."
+                : "Upload a CSV/Excel file or connect a database in the sidebar to begin. Here's the kind of thing you'll be able to ask:"}
+          </p>
+        </div>
       </div>
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2.5 tracking-tight">SGRH Lab Assistant</h2>
-        <p className="text-[15px] text-gray-500 max-w-md leading-relaxed">
-          {online === false
-            ? "Backend offline — start the FastAPI server, then upload a file or connect a database."
-            : hasData
-              ? "Data loaded! Ask anything — summaries, KPIs, charts, tables, comparisons, turnaround times."
-              : "Upload a CSV/Excel file or connect a MySQL/PostgreSQL database in the sidebar to start analyzing."}
-        </p>
-      </div>
-      {hasData && (
-        <div className="grid grid-cols-2 gap-2.5 w-full max-w-md">
-          {FLAT_SUGGESTIONS.slice(0, 8).map(({ q, color }) => (
-            <button key={q} onClick={() => onPrompt(q)}
-              className="flex items-start gap-2 text-left px-3.5 py-3 rounded-2xl border-[1.5px] border-gray-300 bg-white hover:border-gray-300 hover:bg-gray-50 transition-all duration-150 group">
-              <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: color }} />
-              <span className="text-xs text-gray-600 group-hover:text-gray-800 leading-snug transition-colors">{q}</span>
-            </button>
-          ))}
+      {online !== false && (
+        <div className="w-full max-w-lg">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 mb-2.5 text-center">
+            {hasData ? "Try asking" : "Example questions"}
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {FLAT_SUGGESTIONS.slice(0, 6).map(({ q, color }) => (
+              <button key={q} onClick={() => onPrompt(q)}
+                className="flex items-start gap-2 text-left px-3.5 py-3 rounded-2xl border border-stone-200 bg-white shadow-sm hover:border-stone-300 hover:shadow-md hover:-translate-y-px transition-all duration-150 group">
+                <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: color }} />
+                <span className="text-xs text-stone-800 group-hover:text-stone-900 leading-snug transition-colors">{q}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -731,22 +758,22 @@ function DashWidget({ widget, onChange, onRemove }: { widget: Widget; onChange: 
 
   return (
     <div
-      className="absolute flex flex-col bg-white border-[1.5px] border-gray-300 rounded-2xl shadow-sm transition-shadow duration-150 hover:shadow-md overflow-hidden"
+      className="absolute flex flex-col bg-white border border-stone-200 rounded-2xl shadow-sm transition-shadow duration-150 hover:shadow-md overflow-hidden"
       style={{ left: widget.x, top: widget.y, width: widget.w, height: widget.h }}
     >
       <div
         onPointerDown={(e) => begin("move", e)}
-        className="shrink-0 flex items-center justify-between gap-2 px-3 h-9 border-b border-gray-200 bg-gray-50/70 cursor-move select-none"
+        className="shrink-0 flex items-center justify-between gap-2 px-3 h-9 border-b border-stone-100 bg-stone-50/70 cursor-move select-none"
       >
         <div className="flex items-center gap-2 min-w-0">
           <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: widget.color || "#0A5F67" }} />
-          <span className="truncate text-[11px] font-semibold text-gray-600">{widget.title}</span>
+          <span className="truncate text-[11px] font-semibold text-stone-800">{widget.title}</span>
         </div>
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onClick={onRemove}
           title="Remove from dashboard"
-          className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-stone-700 hover:text-red-500 hover:bg-red-50 transition-colors"
         >
           <X size={13} />
         </button>
@@ -771,14 +798,14 @@ function Dashboard({ widgets, setWidgets }: { widgets: Widget[]; setWidgets: Rea
   if (widgets.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 text-center" style={{ background: G.page }}>
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center border-[1.5px] border-gray-300 bg-white">
-          <LayoutDashboard size={28} className="text-gray-400" />
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm" style={{ background: G.accentSoft }}>
+          <LayoutDashboard size={28} style={{ color: G.accent }} />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-gray-800 mb-1.5">Your dashboard is empty</h2>
-          <p className="text-sm text-gray-500 max-w-sm leading-relaxed">
+          <h2 className="text-lg font-bold text-stone-900 mb-1.5">Your dashboard is empty</h2>
+          <p className="text-sm text-stone-800 max-w-sm leading-relaxed">
             In the <span className="font-semibold">Chat</span> tab, hover any chart or table and click{" "}
-            <span className="inline-flex items-center gap-1 font-medium text-gray-600"><Pin size={11} /> Pin</span> to
+            <span className="inline-flex items-center gap-1 font-medium text-stone-800"><Pin size={11} /> Pin</span> to
             place it here, then drag and resize it freely.
           </p>
         </div>
@@ -795,7 +822,7 @@ function Dashboard({ widgets, setWidgets }: { widgets: Widget[]; setWidgets: Rea
         style={{
           minHeight: canvasH,
           maxWidth: 1400,
-          backgroundImage: "radial-gradient(circle, rgba(55,65,81,0.12) 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(circle, rgba(41,37,36,0.12) 1px, transparent 1px)",
           backgroundSize: `${GRID}px ${GRID}px`,
         }}
       >
@@ -814,14 +841,14 @@ function ViewTab({ active, onClick, icon: Icon, label, badge }: { active: boolea
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
       style={{
         background: active ? "#ffffff" : "transparent",
-        color: active ? "#111827" : "#6b7280",
+        color: active ? G.accent : "#57534e",
         boxShadow: active ? "0 1px 2px rgba(0,0,0,0.06)" : undefined,
       }}
     >
       <Icon size={14} />
       {label}
       {badge ? (
-        <span className="ml-0.5 min-w-4 h-4 px-1 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold flex items-center justify-center tabular-nums">
+        <span className="ml-0.5 min-w-4 h-4 px-1 rounded-full bg-stone-200 text-stone-800 text-[10px] font-bold flex items-center justify-center tabular-nums">
           {badge}
         </span>
       ) : null}
@@ -931,17 +958,17 @@ export default function App() {
     <div className="h-screen flex flex-col overflow-hidden" style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif", background: G.page }}>
 
       {/* header */}
-      <header className="shrink-0 border-b border-gray-300 bg-white flex items-center justify-between px-6 h-16">
+      <header className="relative z-20 shrink-0 border-b border-stone-200 bg-white flex items-center justify-between px-6 h-16" style={{ boxShadow: "0 2px 8px -3px rgba(41,37,36,0.10)" }}>
         <div className="flex items-center gap-3.5">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: G.brand }}>
             <FlaskConical size={16} className="text-white" />
           </div>
           <div>
-            <span className="text-[17px] font-bold tracking-tight text-gray-900">SGRH Lab Assistant</span>
+            <span className="text-[17px] font-bold tracking-tight text-stone-900">SGRH Lab Assistant</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex items-center gap-1 bg-stone-100 rounded-xl p-1">
           <ViewTab active={view === "chat"} onClick={() => setView("chat")} icon={MessageSquare} label="Chat" />
           <ViewTab active={view === "dashboard"} onClick={() => setView("dashboard")} icon={LayoutDashboard} label="Dashboard" badge={widgets.length} />
         </div>
@@ -951,7 +978,7 @@ export default function App() {
               when the backend is down. Details live in the hover tooltip. */}
           {(() => {
             const offline = online === false;
-            const dot = offline ? "#dc2626" : online === null ? "#9ca3af" : hasData ? "#059669" : "#9ca3af";
+            const dot = offline ? "#dc2626" : online === null ? "#a8a29e" : hasData ? "#059669" : "#a8a29e";
             const label =
               online === null ? "Checking…"
               : offline ? "Backend offline"
@@ -967,9 +994,9 @@ export default function App() {
                 title={detail}
                 className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border cursor-default tabular-nums"
                 style={{
-                  color: offline ? "#b91c1c" : "#4b5563",
+                  color: offline ? "#b91c1c" : "#44403c",
                   background: offline ? "#fef2f2" : "#ffffff",
-                  borderColor: offline ? "#fecaca" : "#e5e7eb",
+                  borderColor: offline ? "#fecaca" : "#e7e5e4",
                 }}
               >
                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: dot }} />
@@ -988,19 +1015,19 @@ export default function App() {
             the inner <aside> keeps a fixed width so its contents don't reflow
             mid-animation. */}
         <div
-          className="shrink-0 bg-white overflow-hidden transition-[width] duration-300 ease-in-out"
-          style={{ width: sidebarOpen ? "18rem" : 0 }}
+          className="relative z-10 shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out"
+          style={{ width: sidebarOpen ? "18rem" : 0, background: G.panel, boxShadow: sidebarOpen ? "3px 0 12px -4px rgba(41,37,36,0.10)" : undefined }}
         >
-        <aside className="relative w-72 h-full flex flex-col p-4 gap-5 overflow-y-auto border-r border-gray-300" style={{ scrollbarWidth: "none" }}>
+        <aside className="relative w-72 h-full flex flex-col p-4 gap-5 overflow-y-auto border-r border-stone-200" style={{ scrollbarWidth: "none" }}>
           <button
             onClick={() => setSidebarOpen(false)}
             title="Hide sidebar"
-            className="absolute top-2 right-2 z-10 w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+            className="absolute top-2 right-2 z-10 w-8 h-8 rounded-lg flex items-center justify-center text-stone-800 hover:text-stone-900 hover:bg-stone-100 transition-colors"
           >
             <PanelLeftClose size={18} />
           </button>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">Data Sources</p>
+            <p className="text-xs font-bold text-stone-700 uppercase tracking-widest mb-3 px-1">Data Sources</p>
             <div className="space-y-3">
               <UploadPanel onLoaded={onLoaded} onCleared={onCleared} />
               <DbPanel onLoaded={onLoaded} onStatusChange={setDbStatus} />
@@ -1009,18 +1036,18 @@ export default function App() {
 
           {hasData && (
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">Quick Queries</p>
+              <p className="text-xs font-bold text-stone-700 uppercase tracking-widest mb-3 px-1">Quick Queries</p>
               <div className="space-y-4">
                 {QUERY_GROUPS.map((g) => (
                   <div key={g.label}>
-                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 px-1 mb-1">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-800 px-1 mb-1">
                       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: g.color }} />
                       {g.label}
                     </p>
                     <div className="space-y-0.5">
                       {g.queries.map((s) => (
                         <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }}
-                          className="w-full text-left pl-4 pr-2 py-2 rounded-lg text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                          className="w-full text-left pl-4 pr-2 py-2 rounded-lg text-xs text-stone-800 hover:text-stone-900 hover:bg-stone-50 transition-colors">
                           {s}
                         </button>
                       ))}
@@ -1032,9 +1059,9 @@ export default function App() {
           )}
 
           <div className="mt-auto">
-            <div className="rounded-2xl p-4 border border-gray-200" style={{ background: G.brandSoft }}>
-              <p className="text-xs font-bold text-gray-700 mb-2.5">Session Info</p>
-              <div className="space-y-1.5 text-xs text-gray-600/80 font-mono">
+            <div className="rounded-2xl p-4 border border-stone-200" style={{ background: G.brandSoft }}>
+              <p className="text-xs font-bold text-stone-800 mb-2.5">Session Info</p>
+              <div className="space-y-1.5 text-xs text-stone-800/80 font-mono">
                 <div className="flex justify-between"><span>Engine</span><span>Gemini · Vertex</span></div>
                 <div className="flex justify-between"><span>Source</span><span>{loaded ? loaded.source : "none"}</span></div>
                 <div className="flex justify-between"><span>Protocol</span><span>ISO-15189</span></div>
@@ -1051,18 +1078,18 @@ export default function App() {
               button only wipes its own section, never the other. The reopen-
               sidebar button also lives here (when collapsed) so it can't overlap
               the section label. */}
-          <div className="shrink-0 h-11 border-b border-gray-200 bg-white flex items-center justify-between px-4">
+          <div className="shrink-0 h-11 border-b border-stone-200 bg-white flex items-center justify-between px-4">
             <div className="flex items-center gap-2">
               {!sidebarOpen && (
                 <button
                   onClick={() => setSidebarOpen(true)}
                   title="Show sidebar"
-                  className="-ml-1.5 w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                  className="-ml-1.5 w-7 h-7 rounded-lg flex items-center justify-center text-stone-800 hover:text-stone-900 hover:bg-stone-100 transition-colors"
                 >
                   <PanelLeft size={16} />
                 </button>
               )}
-              <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-stone-700">
                 {view === "chat" ? "Conversation" : "Dashboard"}
               </span>
             </div>
@@ -1071,7 +1098,7 @@ export default function App() {
                 onClick={clearChat}
                 disabled={!messages.length}
                 title="Clear conversation"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:hover:text-gray-500 disabled:hover:bg-transparent"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-stone-800 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:hover:text-stone-800 disabled:hover:bg-transparent"
               >
                 <Trash2 size={12} /> Clear chat
               </button>
@@ -1080,7 +1107,7 @@ export default function App() {
                 onClick={clearDashboard}
                 disabled={!widgets.length}
                 title="Clear dashboard"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:hover:text-gray-500 disabled:hover:bg-transparent"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-stone-800 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:hover:text-stone-800 disabled:hover:bg-transparent"
               >
                 <Trash2 size={12} /> Clear dashboard
               </button>
@@ -1090,9 +1117,9 @@ export default function App() {
             <Dashboard widgets={widgets} setWidgets={setWidgets} />
           ) : (
           <>
-          <div className="flex-1 overflow-y-auto px-8 py-8 space-y-6" style={{ scrollbarWidth: "none" }}>
+          <div className="flex-1 overflow-y-auto flex flex-col px-8 py-8 space-y-6" style={{ scrollbarWidth: "none" }}>
             {messages.length === 0
-              ? <EmptyState hasData={hasData} online={online} onPrompt={submitQuery} />
+              ? <EmptyState hasData={hasData} online={online} onPrompt={(q) => { if (hasData) submitQuery(q); else { setInput(q); inputRef.current?.focus(); } }} />
               : messages.map((msg) =>
                   msg.role === "user"
                     ? <UserMessage key={msg.id} msg={msg} />
@@ -1107,7 +1134,7 @@ export default function App() {
           </div>
 
           {/* input bar */}
-          <div className="shrink-0 border-t border-gray-300 bg-white px-6 py-4">
+          <div className="relative z-10 shrink-0 border-t border-stone-200 bg-white px-6 py-4" style={{ boxShadow: "0 -3px 10px -4px rgba(41,37,36,0.07)" }}>
             {online === false && (
               <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-2.5 mb-3">
                 <Server size={12} className="shrink-0 text-amber-500" />
@@ -1115,15 +1142,9 @@ export default function App() {
                 <button onClick={ping} className="underline font-semibold ml-1">retry</button>.
               </div>
             )}
-            {online && !hasData && (
-              <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-2.5 mb-3">
-                <Upload size={12} className="shrink-0 text-blue-500" />
-                Upload a dataset or connect a database in the sidebar — then ask questions about your lab data.
-              </div>
-            )}
             <div
               className="flex items-end gap-2 border rounded-2xl bg-white transition-all duration-200"
-              style={{ borderColor: canSend && input ? "rgba(55,65,81,0.4)" : "rgba(55,65,81,0.22)", boxShadow: canSend && input ? "0 0 0 3px rgba(55,65,81,0.08)" : undefined }}
+              style={{ borderColor: canSend && input ? G.accent : "#e7e5e4", boxShadow: canSend && input ? "0 0 0 3px rgba(15,118,110,0.12)" : undefined }}
             >
               <textarea ref={inputRef} value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -1131,7 +1152,7 @@ export default function App() {
                 disabled={!canSend || isLoading}
                 placeholder={canSend ? "Ask anything about your lab data in plain English…" : "Start the backend to begin"}
                 rows={1}
-                className="flex-1 bg-transparent resize-none overflow-y-auto px-4 py-3.5 text-sm leading-5 text-gray-800 placeholder-gray-400 focus:outline-none max-h-40"
+                className="flex-1 bg-transparent resize-none overflow-y-auto px-4 py-3.5 text-sm leading-5 text-stone-900 placeholder-stone-700 focus:outline-none max-h-40"
                 style={{ scrollbarWidth: "none" }}
               />
               {/* pb-1.5 = (3rem input height − 2.25rem button) / 2 → button is
@@ -1141,7 +1162,7 @@ export default function App() {
                   onClick={() => submitQuery(input)}
                   disabled={!canSend || !input.trim() || isLoading}
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-white hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  style={{ background: G.brand }}
+                  style={{ background: G.accent }}
                 >
                   {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                 </button>
