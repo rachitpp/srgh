@@ -872,12 +872,12 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<"chat" | "dashboard">("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  // Pinned dashboard widgets, restored from localStorage so a board survives a
-  // reload. Layout only — chart data always comes from the stored HTML.
-  const [widgets, setWidgets] = useState<Widget[]>(() => {
-    try { return JSON.parse(localStorage.getItem("sgrh-dashboard") || "[]"); } catch { return []; }
-  });
-  useEffect(() => { localStorage.setItem("sgrh-dashboard", JSON.stringify(widgets)); }, [widgets]);
+  // Pinned dashboard widgets — session-only, deliberately NOT persisted. Each
+  // widget is a snapshot of a dataset that is no longer loaded after a reload,
+  // so a fresh page load starts with a clean board (matching the empty chat).
+  const [widgets, setWidgets] = useState<Widget[]>([]);
+  // Purge the board saved by earlier builds, so old pins don't linger in storage.
+  useEffect(() => { localStorage.removeItem("sgrh-dashboard"); }, []);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
