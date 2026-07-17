@@ -7,6 +7,7 @@ import {
   Database,
   FileSpreadsheet,
   FlaskConical,
+  GripHorizontal,
   Info,
   LayoutDashboard,
   Loader2,
@@ -764,14 +765,15 @@ function DashWidget({ widget, onChange, onRemove }: { widget: Widget; onChange: 
       className="absolute flex flex-col bg-white border border-stone-200 rounded-2xl shadow-sm transition-shadow duration-150 hover:shadow-md overflow-hidden"
       style={{ left: widget.x, top: widget.y, width: widget.w, height: widget.h }}
     >
+      {/* Drag bar — deliberately carries NO answer text: a pinned widget is the
+          visual on its own (the insight sentence stays in the chat). The metric
+          dot keeps the domain colour-coding and the grip signals draggability. */}
       <div
         onPointerDown={(e) => begin("move", e)}
-        className="shrink-0 flex items-center justify-between gap-2 px-3 h-9 border-b border-stone-100 bg-stone-50/70 cursor-move select-none"
+        className="shrink-0 flex items-center justify-between gap-2 px-3 h-8 border-b border-stone-100 bg-stone-50/70 cursor-move select-none"
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: widget.color || "#0A5F67" }} />
-          <span className="truncate text-[11px] font-semibold text-stone-800">{widget.title}</span>
-        </div>
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: widget.color || "#0A5F67" }} />
+        <GripHorizontal size={13} className="text-stone-400 shrink-0" />
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onClick={onRemove}
