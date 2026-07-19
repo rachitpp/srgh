@@ -1,0 +1,22 @@
+# Commits to skip when running `git blame`, so a sweeping reformat doesn't
+# obscure who actually wrote each line.
+#
+# Enable locally (once per clone):
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Only list commits that are PURELY formatting — a Prettier run and nothing
+# else. A commit that also moves, adds, or edits code must NOT go here: blame
+# would skip past the real authorship of that code and attribute it to whatever
+# happened to precede it.
+#
+# To make a listed commit, do the reformat on its own:
+#     npm run format && git commit -am "style: apply prettier"
+#
+# ── entries ──────────────────────────────────────────────────────────────────
+# (none yet)
+#
+# Deliberately NOT listed: 64fff74 "Restructure frontend, add type-checking,
+# tests, linting and CI". That commit applied Prettier across the tree, but it
+# also created 20 modules, deleted 54 files and changed behaviour, so ignoring
+# it would hide real authorship rather than reveal it. The restructured code
+# legitimately originates there.
