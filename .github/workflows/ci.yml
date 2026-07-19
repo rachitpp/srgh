@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [master, ui-theme-refresh]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch cancels the in-flight run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` installs strictly from package-lock.json and fails if the two
+      # have drifted — which `npm install` would silently paper over.
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Test
+        run: npm run test
+
+      # Runs last because it is the slowest, and because it re-runs tsc — this is
+      # also the step that catches things the others tolerate (a UTF-8 BOM in
+      # package.json passes npm/tsc/eslint/vitest but breaks Vite's JSON parse).
+      - name: Build
+        run: npm run build
+
+  backend:
+    name: Backend (syntax)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Compile-only: catches syntax errors without importing, so no Google Cloud
+      # credentials are needed. Running the server for real in CI would require
+      # secrets this workflow deliberately does not have.
+      - name: Byte-compile
+        run: python -m compileall -q server/
+
+      - name: Check requirements resolve
+        run: pip install --dry-run -r server/requirements.txt

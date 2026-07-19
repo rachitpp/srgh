@@ -4,6 +4,12 @@ node_modules/
 # ── Build output ──────────────────────────────────────────────────────────────
 dist/
 
+# ── Test & tooling output ─────────────────────────────────────────────────────
+coverage/
+.vitest/
+*.tsbuildinfo
+.eslintcache
+
 # ── Environment & secrets ─────────────────────────────────────────────────────
 .env
 .env.*

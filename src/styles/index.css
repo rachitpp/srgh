@@ -1,6 +1,6 @@
-@import './fonts.css';
-@import './tailwind.css';
-@import './theme.css';
+@import "./fonts.css";
+@import "./tailwind.css";
+@import "./theme.css";
 
 /* Slightly larger base type — every rem-based (Tailwind) size scales from this. */
 html {
@@ -10,7 +10,7 @@ html {
 /* Unified typography — matches the backend-rendered visuals (FONT_UI / FONT_MONO
    in server/main.py), so app chrome and AI-generated tables/cards read as one product. */
 body {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
   /* Normal-weight baseline so body copy sits back and lets explicit
      medium/semibold/bold classes (headings, KPIs, labels) own the hierarchy. */
   font-weight: 400;
@@ -18,19 +18,22 @@ body {
 .font-mono,
 kbd,
 code {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace !important;
+  font-family: "IBM Plex Mono", ui-monospace, monospace !important;
 }
 
 /* Consistent keyboard-focus ring across every interactive element — clinical
    teal, only on keyboard focus (:focus-visible) so mouse clicks stay clean.
-   Elements with their own focus treatment (e.g. the composer's textarea, which
-   sets focus:outline-none + a custom ring) win on specificity and are unaffected. */
-button:focus-visible,
-a:focus-visible,
-[role="button"]:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
+   These rules are UNLAYERED, so they beat Tailwind's layered utilities in the
+   cascade no matter the specificity — a local `focus:outline-none` cannot
+   override them. Elements that draw their own focus treatment must therefore
+   opt out explicitly with data-custom-focus (e.g. the composer's textarea,
+   whose wrapper renders the accent border + glow). */
+button:not([data-custom-focus]):focus-visible,
+a:not([data-custom-focus]):focus-visible,
+[role="button"]:not([data-custom-focus]):focus-visible,
+input:not([data-custom-focus]):focus-visible,
+textarea:not([data-custom-focus]):focus-visible,
+select:not([data-custom-focus]):focus-visible {
   outline: 2px solid #0f766e;
   outline-offset: 2px;
   border-radius: 8px;
@@ -41,7 +44,7 @@ select:focus-visible {
    rules give every other scroll area a thin, sober bar and honour the hide
    intent in Chromium too, so the look is consistent across browsers. */
 * {
-  scrollbar-width: thin;                              /* Firefox */
+  scrollbar-width: thin; /* Firefox */
   scrollbar-color: rgba(41, 37, 36, 0.28) transparent;
 }
 *::-webkit-scrollbar {
