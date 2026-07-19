@@ -11,14 +11,29 @@ html {
    in server/main.py), so app chrome and AI-generated tables/cards read as one product. */
 body {
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  /* Slightly heavier baseline so default-weight UI text reads bolder / more
-     present. Explicit medium/semibold/bold classes are unaffected. */
-  font-weight: 500;
+  /* Normal-weight baseline so body copy sits back and lets explicit
+     medium/semibold/bold classes (headings, KPIs, labels) own the hierarchy. */
+  font-weight: 400;
 }
 .font-mono,
 kbd,
 code {
   font-family: 'IBM Plex Mono', ui-monospace, monospace !important;
+}
+
+/* Consistent keyboard-focus ring across every interactive element — clinical
+   teal, only on keyboard focus (:focus-visible) so mouse clicks stay clean.
+   Elements with their own focus treatment (e.g. the composer's textarea, which
+   sets focus:outline-none + a custom ring) win on specificity and are unaffected. */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+  border-radius: 8px;
 }
 
 /* Scrollbars — the app hides some via inline `scrollbar-width: none` (Firefox

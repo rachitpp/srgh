@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   AlertCircle,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Copy,
   Database,
   FileSpreadsheet,
   FlaskConical,
@@ -79,15 +81,15 @@ interface DbConfig {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-// Sober, neutral palette — flat dark charcoal accent, plain light-grey surfaces.
-// No gradients, no glow: understated and professional.
+// Clean clinical palette — white content canvas, cool light-grey chrome, a single
+// teal accent. Cool slate ink instead of warm charcoal. No gradients, no glow.
 const G = {
-  brand: "#292524",     // warm stone ink — a graphite with a clay undertone
-  brandSoft: "#e7e3dd", // warm greige for icon tiles / soft fills
-  page: "#e8e4de",      // warm canvas so white surfaces read as raised layers
-  accent: "#0f766e",    // clinical teal — the single action/identity accent
-  accentSoft: "#e3efed", // soft teal wash for accented tiles / highlights
-  panel: "#f5f3ef",     // warm off-white for the sidebar, a step below header white
+  brand: "#0f172a",      // cool slate ink — logo tiles, message avatars
+  brandSoft: "#eef2f7",  // cool light grey for icon tiles / soft fills
+  page: "#ffffff",       // clean white content canvas
+  accent: "#0f766e",     // clinical teal — the single action/identity accent
+  accentSoft: "#e6f4f2", // soft teal wash for accented tiles / highlights
+  panel: "#f4f6f9",      // cool light grey sidebar — recessed a step below content
 };
 
 function uid() { return Math.random().toString(36).slice(2, 10); }
@@ -124,6 +126,29 @@ function isTableRequest(msg: string) {
 }
 
 // ── ui pieces ─────────────────────────────────────────────────────────────────
+
+// Hover-reveal copy control for an assistant answer's text. Shows a check for a
+// beat after copying so the action has clear feedback.
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard blocked — silently no-op */ }
+  }
+  return (
+    <button
+      onClick={copy}
+      aria-label={copied ? "Copied" : "Copy answer"}
+      title={copied ? "Copied" : "Copy answer"}
+      className="flex items-center justify-center w-6 h-6 rounded-md text-stone-500 hover:text-stone-800 hover:bg-stone-100 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
+    >
+      {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+    </button>
+  );
+}
 
 function TypingDots() {
   return (
@@ -273,7 +298,10 @@ function AgentMessage({ msg, sourceNote, onPin }: { msg: Message; sourceNote?: s
             >
               {metric.tag}
             </span>
-            <span className="text-[11px] text-stone-700 font-mono">{fmt(msg.timestamp)}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-stone-700 font-mono">{fmt(msg.timestamp)}</span>
+              {msg.text && <CopyButton text={msg.text} />}
+            </div>
           </div>
           {msg.text && (
             <p className="px-4 pt-2.5 pb-3.5 text-[15px] font-medium text-stone-900 leading-relaxed whitespace-pre-wrap">
@@ -290,6 +318,7 @@ function AgentMessage({ msg, sourceNote, onPin }: { msg: Message; sourceNote?: s
                 {onPin && (
                   <button
                     onClick={() => onPin(v, pinTitle(msg.text, metric.tag))}
+                    aria-label="Pin to dashboard"
                     title="Pin to dashboard"
                     className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg bg-white/90 border border-stone-200 text-[11px] font-medium text-stone-800 opacity-0 group-hover/vis:opacity-100 hover:text-stone-900 hover:border-stone-300 transition-all backdrop-blur-sm"
                   >
@@ -412,7 +441,7 @@ function UploadPanel({ onLoaded, onCleared }: { onLoaded: (i: LoadedInfo) => voi
   return (
     <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden shadow-sm">
       <div className="px-4 py-3 flex items-center gap-2.5 border-b border-stone-100">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#efece7" }}>
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: G.brandSoft }}>
           <FileSpreadsheet size={14} className="text-stone-800" />
         </div>
         <div className="flex-1">
@@ -420,9 +449,12 @@ function UploadPanel({ onLoaded, onCleared }: { onLoaded: (i: LoadedInfo) => voi
           <p className="text-xs text-stone-700">.xlsx · .xls · .csv</p>
         </div>
         {columns && (
-          <button onClick={clear} className="text-stone-700 hover:text-red-500 transition-colors">
-            <Trash2 size={13} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">Loaded</span>
+            <button onClick={clear} aria-label="Remove dataset" title="Remove dataset" className="text-stone-700 hover:text-red-500 transition-colors">
+              <Trash2 size={13} />
+            </button>
+          </div>
         )}
       </div>
 
@@ -434,13 +466,18 @@ function UploadPanel({ onLoaded, onCleared }: { onLoaded: (i: LoadedInfo) => voi
             onDragLeave={() => setDragging(false)}
             onClick={() => inputRef.current?.click()}
             className="border-2 border-dashed rounded-xl px-4 py-4 flex flex-col items-center gap-2 cursor-pointer transition-all duration-200"
-            style={{ borderColor: dragging ? "#44403c" : "#d6d3d1", background: dragging ? "rgba(41,37,36,0.05)" : "rgba(41,37,36,0.02)" }}
+            style={{
+              borderColor: dragging ? G.accent : "#d6d3d1",
+              background: dragging ? "rgba(15,118,110,0.06)" : "rgba(15,23,42,0.02)",
+            }}
           >
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: G.brandSoft }}>
-              <Upload size={17} className="text-stone-800" />
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors" style={{ background: dragging ? G.accentSoft : G.brandSoft }}>
+              <Upload size={17} className="text-stone-800" style={dragging ? { color: G.accent } : undefined} />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-stone-800">Drop your file here</p>
+              <p className="text-sm font-medium text-stone-800 transition-colors" style={dragging ? { color: G.accent } : undefined}>
+                {dragging ? "Drop to upload" : "Drop your file here"}
+              </p>
               <p className="text-xs text-stone-700 mt-0.5">or click to browse</p>
             </div>
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
@@ -545,7 +582,8 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
     }
   }
 
-  const dot: Record<DbStatus, string> = { disconnected: "#d6d3d1", connecting: "#f59e0b", connected: "#10b981", error: "#ef4444" };
+  const dot: Record<DbStatus, string> = { disconnected: "#94a3b8", connecting: "#f59e0b", connected: "#10b981", error: "#ef4444" };
+  const txt: Record<DbStatus, string> = { disconnected: "#64748b", connecting: "#b45309", connected: "#047857", error: "#dc2626" };
   const lbl: Record<DbStatus, string> = { disconnected: "Not connected", connecting: "Connecting…", connected: `${tables.length} tables found`, error: "Failed" };
 
   return (
@@ -559,7 +597,7 @@ function DbPanel({ onLoaded, onStatusChange }: { onLoaded: (i: LoadedInfo) => vo
             <p className="text-sm font-semibold text-stone-900">Database</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: dot[status] }} />
-              <span className="text-xs" style={{ color: dot[status] }}>{lbl[status]}</span>
+              <span className="text-xs font-medium" style={{ color: txt[status] }}>{lbl[status]}</span>
             </div>
           </div>
         </div>
@@ -671,37 +709,40 @@ const QUERY_GROUPS: { label: string; color: string; queries: string[] }[] = [
   },
 ];
 
-// Flat view (query + its group color) for the empty-state grid.
-const FLAT_SUGGESTIONS = QUERY_GROUPS.flatMap((g) => g.queries.map((q) => ({ q, color: g.color })));
+// Flat view (query + its group color + label) for the empty-state grid.
+const FLAT_SUGGESTIONS = QUERY_GROUPS.flatMap((g) => g.queries.map((q) => ({ q, color: g.color, label: g.label })));
 
 function EmptyState({ hasData, online, onPrompt }: { hasData: boolean; online: boolean | null; onPrompt: (p: string) => void }) {
   return (
-    <div className="m-auto flex flex-col items-center gap-6 px-6 py-6 text-center">
-      <div className="flex flex-col items-center gap-5 text-center">
+    <div className="m-auto flex flex-col items-center gap-7 px-6 py-10 text-center">
+      <div className="flex flex-col items-center gap-4">
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm" style={{ background: G.accentSoft }}>
           <Microscope size={30} style={{ color: G.accent }} />
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-stone-900 mb-2 tracking-tight">SGRH Lab Assistant</h2>
-          <p className="text-[15px] text-stone-700 max-w-md leading-relaxed">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-stone-900 tracking-tight">SGRH Lab Assistant</h2>
+          <p className="text-[15px] text-stone-600 max-w-md leading-relaxed mx-auto">
             {online === false
               ? "Backend offline — start the FastAPI server, then upload a file or connect a database."
               : hasData
-                ? "Ask anything about your lab data — summaries, KPIs, charts, tables, comparisons, turnaround times."
-                : "Upload a CSV/Excel file or connect a database in the sidebar to begin. Here's the kind of thing you'll be able to ask:"}
+                ? "Ask anything about your lab data — summaries, KPIs, charts, tables, and turnaround times."
+                : "Upload a CSV/Excel file or connect a database in the sidebar to begin."}
           </p>
         </div>
       </div>
       {online !== false && (
         <div className="w-full max-w-lg">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 mb-2.5 text-center">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 mb-3 text-center">
             {hasData ? "Try asking" : "Example questions"}
           </p>
           <div className="grid grid-cols-2 gap-2.5">
-            {FLAT_SUGGESTIONS.slice(0, 6).map(({ q, color }) => (
+            {FLAT_SUGGESTIONS.slice(0, 6).map(({ q, color, label }) => (
               <button key={q} onClick={() => onPrompt(q)}
-                className="flex items-start gap-2 text-left px-3.5 py-3 rounded-2xl border border-stone-200 bg-white shadow-sm hover:border-stone-300 hover:shadow-md hover:-translate-y-px transition-all duration-150 group">
-                <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: color }} />
+                className="flex flex-col gap-1.5 text-left px-3.5 py-3 rounded-2xl border border-stone-200 bg-white shadow-sm hover:border-stone-300 hover:shadow-md hover:-translate-y-px transition-all duration-150 group">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>{label}</span>
+                </span>
                 <span className="text-xs text-stone-800 group-hover:text-stone-900 leading-snug transition-colors">{q}</span>
               </button>
             ))}
@@ -777,6 +818,7 @@ function DashWidget({ widget, onChange, onRemove }: { widget: Widget; onChange: 
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onClick={onRemove}
+          aria-label="Remove from dashboard"
           title="Remove from dashboard"
           className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-stone-700 hover:text-red-500 hover:bg-red-50 transition-colors"
         >
@@ -845,15 +887,21 @@ function ViewTab({ active, onClick, icon: Icon, label, badge }: { active: boolea
       onClick={onClick}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
       style={{
-        background: active ? "#ffffff" : "transparent",
-        color: active ? G.accent : "#57534e",
-        boxShadow: active ? "0 1px 2px rgba(0,0,0,0.06)" : undefined,
+        background: active ? G.accent : "transparent",
+        color: active ? "#ffffff" : "#475569",
+        boxShadow: active ? "0 1px 2px rgba(15,23,42,0.12)" : undefined,
       }}
     >
       <Icon size={14} />
       {label}
       {badge ? (
-        <span className="ml-0.5 min-w-4 h-4 px-1 rounded-full bg-stone-200 text-stone-800 text-[10px] font-bold flex items-center justify-center tabular-nums">
+        <span
+          className="ml-0.5 min-w-4 h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center tabular-nums"
+          style={{
+            background: active ? "rgba(255,255,255,0.25)" : "#e2e8f0",
+            color: active ? "#ffffff" : "#334155",
+          }}
+        >
           {badge}
         </span>
       ) : null}
@@ -871,13 +919,24 @@ export default function App() {
   const [dbStatus, setDbStatus] = useState<DbStatus>("disconnected");
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<"chat" | "dashboard">("chat");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Start collapsed on narrow viewports so the chat/dashboard get full width.
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window === "undefined" ? true : window.innerWidth >= 1024
+  );
   // Pinned dashboard widgets — session-only, deliberately NOT persisted. Each
   // widget is a snapshot of a dataset that is no longer loaded after a reload,
   // so a fresh page load starts with a clean board (matching the empty chat).
   const [widgets, setWidgets] = useState<Widget[]>([]);
   // Purge the board saved by earlier builds, so old pins don't linger in storage.
   useEffect(() => { localStorage.removeItem("sgrh-dashboard"); }, []);
+  // Auto-collapse/expand the sidebar when the viewport crosses the lg breakpoint.
+  // Only fires on crossings, so a manual toggle persists until the width changes.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1024px)");
+    const apply = () => setSidebarOpen(!mq.matches);
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -973,7 +1032,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-stone-100 rounded-xl p-1">
+        <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
           <ViewTab active={view === "chat"} onClick={() => setView("chat")} icon={MessageSquare} label="Chat" />
           <ViewTab active={view === "dashboard"} onClick={() => setView("dashboard")} icon={LayoutDashboard} label="Dashboard" badge={widgets.length} />
         </div>
@@ -1026,6 +1085,7 @@ export default function App() {
         <aside className="relative w-72 h-full flex flex-col p-4 gap-5 overflow-y-auto border-r border-stone-200" style={{ scrollbarWidth: "none" }}>
           <button
             onClick={() => setSidebarOpen(false)}
+            aria-label="Hide sidebar"
             title="Hide sidebar"
             className="absolute top-2 right-2 z-10 w-8 h-8 rounded-lg flex items-center justify-center text-stone-800 hover:text-stone-900 hover:bg-stone-100 transition-colors"
           >
@@ -1088,6 +1148,7 @@ export default function App() {
               {!sidebarOpen && (
                 <button
                   onClick={() => setSidebarOpen(true)}
+                  aria-label="Show sidebar"
                   title="Show sidebar"
                   className="-ml-1.5 w-7 h-7 rounded-lg flex items-center justify-center text-stone-800 hover:text-stone-900 hover:bg-stone-100 transition-colors"
                 >
@@ -1149,7 +1210,12 @@ export default function App() {
             )}
             <div
               className="flex items-end gap-2 border rounded-2xl bg-white transition-all duration-200"
-              style={{ borderColor: canSend && input ? G.accent : "#e7e5e4", boxShadow: canSend && input ? "0 0 0 3px rgba(15,118,110,0.12)" : undefined }}
+              style={{
+                borderColor: canSend && input ? G.accent : "#e7e5e4",
+                boxShadow: canSend && input
+                  ? "0 0 0 3px rgba(15,118,110,0.12)"
+                  : "0 1px 3px rgba(15,23,42,0.06)",
+              }}
             >
               <textarea ref={inputRef} value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -1166,6 +1232,8 @@ export default function App() {
                 <button
                   onClick={() => submitQuery(input)}
                   disabled={!canSend || !input.trim() || isLoading}
+                  aria-label={isLoading ? "Sending…" : "Send message"}
+                  title="Send message"
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-white hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{ background: G.accent }}
                 >
@@ -1173,6 +1241,15 @@ export default function App() {
                 </button>
               </div>
             </div>
+            {canSend && (
+              <div className="flex items-center justify-end gap-1.5 mt-1.5 px-1 text-[11px] text-stone-500">
+                <kbd className="font-mono px-1.5 py-0.5 rounded bg-stone-100 border border-stone-200 text-stone-600">Enter</kbd>
+                <span>to send</span>
+                <span className="text-stone-300">·</span>
+                <kbd className="font-mono px-1.5 py-0.5 rounded bg-stone-100 border border-stone-200 text-stone-600">Shift + Enter</kbd>
+                <span>for new line</span>
+              </div>
+            )}
           </div>
           </>
           )}
