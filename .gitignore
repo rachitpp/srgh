@@ -16,7 +16,9 @@ project-*.json
 
 # ── Python backend ────────────────────────────────────────────────────────────
 .venv/
+venv/
 server/.venv/
+server/venv/
 __pycache__/
 *.pyc
 
