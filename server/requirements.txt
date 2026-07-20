@@ -13,7 +13,11 @@ openpyxl                  # .xlsx reading for pandas.read_excel
 xlrd                      # .xls reading for pandas.read_excel
 
 # Gemini via Vertex AI (the new unified SDK — provides `from google import genai`)
-google-genai
+# Pinned: unpinned installs the 2.x line, whose `interactions`/`_gaos` submodule
+# takes ~90s+ to import at process start (builds hundreds of pydantic models),
+# which makes `python main.py` look hung. 1.20.x keeps the stable Client/models
+# API this code uses and imports in <1s. Do not bump to 2.x without re-checking.
+google-genai==1.20.0
 
 # Database drivers
 mysql-connector-python

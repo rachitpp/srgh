@@ -2,7 +2,6 @@ import { useState } from "react";
 import { AlertCircle, ChevronDown, Database, Loader2, Table } from "lucide-react";
 import type { DbConfig, DbConnectPayload, DbStatus, DbType, LoadedInfo } from "../../types";
 import { isApiError } from "../../types";
-import { G } from "../../theme";
 import { NetworkError, dbConnect, dbLoadAllTables, errorMessage } from "../../api/client";
 
 export function DbPanel({
@@ -88,17 +87,18 @@ export function DbPanel({
     }
   }
 
+  // Status colours are theme tokens (CSS vars) so they re-theme with the app.
   const dot: Record<DbStatus, string> = {
-    disconnected: "#94a3b8",
-    connecting: "#f59e0b",
-    connected: "#10b981",
-    error: "#ef4444",
+    disconnected: "var(--muted-foreground)",
+    connecting: "var(--warning)",
+    connected: "var(--success)",
+    error: "var(--destructive)",
   };
   const txt: Record<DbStatus, string> = {
-    disconnected: "#64748b",
-    connecting: "#b45309",
-    connected: "#047857",
-    error: "#dc2626",
+    disconnected: "var(--muted-foreground)",
+    connecting: "var(--warning)",
+    connected: "var(--success)",
+    error: "var(--destructive)",
   };
   const lbl: Record<DbStatus, string> = {
     disconnected: "Not connected",
@@ -108,20 +108,17 @@ export function DbPanel({
   };
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden shadow-sm">
+    <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-stone-50/40 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors"
       >
         <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: G.brandSoft }}
-          >
-            <Database size={14} className="text-stone-800" />
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-soft">
+            <Database size={14} className="text-brand-soft-foreground" />
           </div>
           <div className="text-left">
-            <p className="text-sm font-semibold text-stone-900">Database</p>
+            <p className="text-sm font-semibold text-foreground">Database</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: dot[status] }} />
               <span className="text-xs font-medium" style={{ color: txt[status] }}>
@@ -132,15 +129,15 @@ export function DbPanel({
         </div>
         <ChevronDown
           size={14}
-          className={`text-stone-700 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
       </button>
 
       {open && (
-        <div className="border-t border-stone-100 px-4 pb-3.5 pt-2.5 space-y-2.5">
+        <div className="border-t border-border/60 px-4 pb-3.5 pt-2.5 space-y-2.5">
           <div className="grid grid-cols-2 gap-x-2 gap-y-2">
             <div className="col-span-2">
-              <label className="block text-xs font-medium text-stone-800 mb-0.5">Type</label>
+              <label className="block text-xs font-medium text-foreground mb-0.5">Type</label>
               <select
                 value={cfg.db_type}
                 onChange={(e) =>
@@ -150,7 +147,7 @@ export function DbPanel({
                     port: e.target.value === "postgres" ? "5432" : "3306",
                   })
                 }
-                className="w-full bg-stone-50/50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-sm text-stone-800 focus:outline-none focus:border-stone-400"
+                className="w-full bg-muted/50 border border-border rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-ring"
               >
                 <option value="mysql">MySQL</option>
                 <option value="postgres">PostgreSQL</option>
@@ -166,12 +163,12 @@ export function DbPanel({
               ] as { label: string; key: keyof DbConfig; type?: string }[]
             ).map(({ label, key, type }) => (
               <div key={key}>
-                <label className="block text-xs font-medium text-stone-800 mb-0.5">{label}</label>
+                <label className="block text-xs font-medium text-foreground mb-0.5">{label}</label>
                 <input
                   type={type ?? "text"}
                   value={cfg[key]}
                   onChange={(e) => setCfg({ ...cfg, [key]: e.target.value })}
-                  className="w-full bg-stone-50/50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-sm text-stone-800 focus:outline-none focus:border-stone-400"
+                  className="w-full bg-muted/50 border border-border rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-ring"
                   placeholder={type === "password" ? "••••••••" : label.toLowerCase()}
                 />
               </div>
@@ -179,7 +176,7 @@ export function DbPanel({
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+            <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-3 py-2">
               <AlertCircle size={12} />
               {error}
             </div>
@@ -187,12 +184,12 @@ export function DbPanel({
 
           {status === "connected" && tables.length > 0 && (
             <div
-              className="bg-stone-50 rounded-xl p-2.5 max-h-32 overflow-y-auto space-y-1"
+              className="bg-muted rounded-xl p-2.5 max-h-32 overflow-y-auto space-y-1"
               style={{ scrollbarWidth: "thin" }}
             >
               {tables.map((t) => (
-                <div key={t} className="flex items-center gap-1.5 text-xs text-stone-800">
-                  <Table size={10} className="text-stone-700 shrink-0" />
+                <div key={t} className="flex items-center gap-1.5 text-xs text-foreground">
+                  <Table size={10} className="text-muted-foreground shrink-0" />
                   <span className="font-mono truncate">{t}</span>
                 </div>
               ))}
@@ -203,8 +200,7 @@ export function DbPanel({
             <button
               onClick={() => void connect()}
               disabled={status === "connecting"}
-              className="w-full py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{ background: G.accent }}
+              className="w-full py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {status === "connecting" && <Loader2 size={13} className="animate-spin" />}
               {status === "connecting" ? "Connecting…" : status === "connected" ? "Reconnect" : "Connect"}
@@ -213,7 +209,7 @@ export function DbPanel({
               <button
                 onClick={() => void loadAll()}
                 disabled={loadingAll}
-                className="w-full py-2 text-sm font-semibold text-stone-800 border border-stone-200 rounded-xl hover:bg-stone-50 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                className="w-full py-2 text-sm font-semibold text-foreground border border-border rounded-xl hover:bg-muted transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {loadingAll && <Loader2 size={13} className="animate-spin" />}
                 {loadingAll ? "Loading…" : "Load all tables"}

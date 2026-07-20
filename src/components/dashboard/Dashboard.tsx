@@ -1,7 +1,6 @@
 import type React from "react";
 import { LayoutDashboard, Pin } from "lucide-react";
 import type { Widget } from "../../types";
-import { G } from "../../theme";
 import { DashWidget } from "./DashWidget";
 import { GRID } from "./constants";
 
@@ -20,21 +19,15 @@ export function Dashboard({
 
   if (widgets.length === 0) {
     return (
-      <div
-        className="flex-1 flex flex-col items-center justify-center gap-5 px-6 text-center"
-        style={{ background: G.page }}
-      >
-        <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm"
-          style={{ background: G.accentSoft }}
-        >
-          <LayoutDashboard size={28} style={{ color: G.accent }} />
+      <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 text-center bg-background">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm bg-primary-soft">
+          <LayoutDashboard size={28} className="text-primary" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-stone-900 mb-1.5">Your dashboard is empty</h2>
-          <p className="text-sm text-stone-800 max-w-sm leading-relaxed">
+          <h2 className="text-lg font-bold text-foreground mb-1.5">Your dashboard is empty</h2>
+          <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
             In the <span className="font-semibold">Chat</span> tab, hover any chart or table and click{" "}
-            <span className="inline-flex items-center gap-1 font-medium text-stone-800">
+            <span className="inline-flex items-center gap-1 font-medium text-foreground">
               <Pin size={11} /> Pin
             </span>{" "}
             to place it here, then drag and resize it freely.
@@ -46,14 +39,15 @@ export function Dashboard({
 
   const canvasH = Math.max(600, ...widgets.map((w) => w.y + w.h + 80));
   return (
-    <div className="flex-1 overflow-auto p-6" style={{ background: G.page }}>
-      {/* dot grid — signals a movable canvas and makes the snap-to-grid legible */}
+    <div className="flex-1 overflow-auto p-6 bg-background">
+      {/* dot grid — signals a movable canvas and makes the snap-to-grid legible.
+          The dot colour is the --grid-dot token so it stays visible in dark mode. */}
       <div
         className="relative mx-auto"
         style={{
           minHeight: canvasH,
           maxWidth: 1400,
-          backgroundImage: "radial-gradient(circle, rgba(41,37,36,0.12) 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(circle, var(--grid-dot) 1px, transparent 1px)",
           backgroundSize: `${GRID}px ${GRID}px`,
         }}
       >

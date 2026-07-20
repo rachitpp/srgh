@@ -1,83 +1,106 @@
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================================
+   Design tokens — the SINGLE source of truth for colour in the app.
+   Components reference these only through semantic Tailwind utilities
+   (bg-card, text-foreground, border-border, bg-primary…), never raw hex or
+   palette classes like `stone-*`. Because every colour is a variable, the
+   `.dark` block below re-themes the whole product with no `dark:` utilities
+   and no per-component changes.
+
+   Palette: "clean clinical" — white canvas, cool slate ink, one teal accent.
+   ==========================================================================*/
+
 :root {
-  --font-size: 15px;
-  --background: #fafafc;
-  --foreground: #0f1117;
+  /* Surfaces & ink */
+  --background: #ffffff; /* app canvas */
+  --foreground: #0f172a; /* primary slate ink */
   --card: #ffffff;
-  --card-foreground: #0f1117;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #0f1117;
-  --primary: #6c47ff;
+  --popover-foreground: #0f172a;
+
+  /* Primary = the single teal action / identity accent */
+  --primary: #0f766e;
   --primary-foreground: #ffffff;
-  --secondary: #f0edff;
-  --secondary-foreground: #6c47ff;
-  --muted: #f4f4f8;
-  --muted-foreground: #7c7f93;
-  --accent: #ff5fa0;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
+  --primary-soft: #e6f4f2; /* teal wash — feature icons, drag-over */
+
+  /* Secondary / muted neutrals */
+  --secondary: #f1f5f9;
+  --secondary-foreground: #334155;
+  --muted: #f4f6f9; /* soft fills, insets */
+  --muted-foreground: #64748b; /* secondary text, icons */
+
+  /* Accent (hover fills) mirrors the teal identity */
+  --accent: #e6f4f2;
+  --accent-foreground: #0f766e;
+
+  /* Status hues — used as text-<x> / bg-<x>/10, never hardcoded per component */
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: rgba(108, 71, 255, 0.1);
+  --success: #059669;
+  --success-foreground: #ffffff;
+  --warning: #d97706;
+  --warning-foreground: #ffffff;
+
+  /* Brand chrome — the slate-ink logo/avatar tiles + neutral icon tiles */
+  --brand: #0f172a;
+  --brand-foreground: #ffffff;
+  --brand-soft: #eef2f7; /* cool grey icon tiles (upload/db headers) */
+  --brand-soft-foreground: #334155;
+
+  /* Structure */
+  --border: #e2e8f0;
   --input: transparent;
-  --input-background: #f4f4f8;
-  --switch-background: #e2e2f0;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --ring: #6c47ff;
-  --chart-1: #6c47ff;
-  --chart-2: #06d6a0;
-  --chart-3: #ffd166;
-  --chart-4: #ff5fa0;
-  --chart-5: #ef4444;
+  --ring: #0f766e;
+  --panel: #f4f6f9; /* recessed sidebar surface */
+  --grid-dot: rgba(15, 23, 42, 0.12); /* dashboard canvas dot grid */
   --radius: 0.75rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0f1117;
-  --sidebar-primary: #6c47ff;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f0edff;
-  --sidebar-accent-foreground: #6c47ff;
-  --sidebar-border: rgba(108, 71, 255, 0.08);
-  --sidebar-ring: #6c47ff;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
 }
 
 .dark {
-  --background: #111318;
-  --foreground: #e4e7ed;
-  --card: #191c23;
-  --card-foreground: #e4e7ed;
-  --popover: #191c23;
-  --popover-foreground: #e4e7ed;
-  --primary: #4f8ef7;
-  --primary-foreground: #ffffff;
-  --secondary: #20242d;
-  --secondary-foreground: #9aa3b2;
-  --muted: #20242d;
-  --muted-foreground: #6b7280;
-  --accent: #4f8ef7;
-  --accent-foreground: #ffffff;
-  --destructive: #e05252;
-  --destructive-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.07);
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --card: #1e293b;
+  --card-foreground: #e2e8f0;
+  --popover: #1e293b;
+  --popover-foreground: #e2e8f0;
+
+  --primary: #14b8a6; /* brighter teal reads better on dark */
+  --primary-foreground: #04211d;
+  --primary-soft: #10312e;
+
+  --secondary: #1e293b;
+  --secondary-foreground: #cbd5e1;
+  --muted: #172033;
+  --muted-foreground: #94a3b8;
+
+  --accent: #10312e;
+  --accent-foreground: #5eead4;
+
+  --destructive: #f87171;
+  --destructive-foreground: #1a0b0b;
+  --success: #34d399;
+  --success-foreground: #052e22;
+  --warning: #fbbf24;
+  --warning-foreground: #2a1a02;
+
+  --brand: #334155; /* slate tile stays visible against the dark canvas */
+  --brand-foreground: #e2e8f0;
+  --brand-soft: #1e293b;
+  --brand-soft-foreground: #cbd5e1;
+
+  --border: #24324a;
   --input: transparent;
-  --ring: #4f8ef7;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --chart-1: #4f8ef7;
-  --chart-2: #6ee7b7;
-  --chart-3: #f59e0b;
-  --chart-4: #a78bfa;
-  --chart-5: #e05252;
-  --sidebar: #0e1016;
-  --sidebar-foreground: #e4e7ed;
-  --sidebar-primary: #4f8ef7;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #20242d;
-  --sidebar-accent-foreground: #9aa3b2;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: #4f8ef7;
+  --ring: #14b8a6;
+  --panel: #0b1322;
+  --grid-dot: rgba(148, 163, 184, 0.14);
 }
 
+/* Expose the tokens above to Tailwind so `bg-card`, `text-muted-foreground`,
+   `border-border`, `bg-primary/10`, `text-warning`, `bg-brand`, etc. all exist. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -87,6 +110,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -95,28 +119,30 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-foreground: var(--brand-soft-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
-  --color-input-background: var(--input-background);
-  --color-switch-background: var(--switch-background);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
+  --color-panel: var(--panel);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Named steps for the two type sizes that recur across the chrome, so
+     components stop reaching for arbitrary `text-[10px]` / `text-[11px]`. */
+  --text-xxs: 0.625rem; /* 10px */
+  --text-xxs--line-height: 1rem;
+  --text-2xs: 0.6875rem; /* 11px */
+  --text-2xs--line-height: 1rem;
 }
 
 @layer base {
@@ -129,12 +155,12 @@
   }
 
   /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
+   * Default typography for bare HTML elements. These live in @layer base, so
+   * any Tailwind utility (text-sm, text-lg, font-bold…) still overrides them.
+   */
 
   html {
-    font-size: var(--font-size);
+    font-size: var(--font-size, 15px);
   }
 
   h1 {

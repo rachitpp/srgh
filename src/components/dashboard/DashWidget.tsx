@@ -61,7 +61,7 @@ export function DashWidget({
 
   return (
     <div
-      className="absolute flex flex-col bg-white border border-stone-200 rounded-2xl shadow-sm transition-shadow duration-150 hover:shadow-md overflow-hidden"
+      className="absolute flex flex-col bg-card border border-border rounded-2xl shadow-sm transition-shadow duration-150 hover:shadow-md overflow-hidden"
       style={{ left: widget.x, top: widget.y, width: widget.w, height: widget.h }}
     >
       {/* Drag bar — deliberately carries NO answer text: a pinned widget is the
@@ -69,19 +69,20 @@ export function DashWidget({
           dot keeps the domain colour-coding and the grip signals draggability. */}
       <div
         onPointerDown={(e) => begin("move", e)}
-        className="shrink-0 flex items-center justify-between gap-2 px-3 h-8 border-b border-stone-100 bg-stone-50/70 cursor-move select-none"
+        className="shrink-0 flex items-center justify-between gap-2 px-3 h-8 border-b border-border/60 bg-muted/70 cursor-move select-none"
       >
+        {/* widget.color is the metric-domain colour (data), so it stays inline. */}
         <span
           className="w-1.5 h-1.5 rounded-full shrink-0"
           style={{ background: widget.color || "#0A5F67" }}
         />
-        <GripHorizontal size={13} className="text-stone-400 shrink-0" />
+        <GripHorizontal size={13} className="text-muted-foreground/70 shrink-0" />
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onClick={onRemove}
           aria-label="Remove from dashboard"
           title="Remove from dashboard"
-          className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-stone-700 hover:text-red-500 hover:bg-red-50 transition-colors"
+          className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
         >
           <X size={13} />
         </button>
@@ -97,7 +98,10 @@ export function DashWidget({
       <div
         onPointerDown={(e) => begin("resize", e)}
         className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
-        style={{ background: "linear-gradient(135deg, transparent 50%, rgba(107,114,128,0.35) 50%)" }}
+        style={{
+          background:
+            "linear-gradient(135deg, transparent 50%, color-mix(in srgb, var(--muted-foreground) 45%, transparent) 50%)",
+        }}
       />
     </div>
   );

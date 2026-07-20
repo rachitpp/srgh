@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type React from "react";
 import { Loader2, Search, Send, Server } from "lucide-react";
-import { G } from "../../theme";
+import { cn } from "../../lib/utils";
 
 interface ComposerProps {
   value: string;
@@ -37,13 +37,10 @@ export function Composer({ value, onChange, onSubmit, inputRef, isLoading, onlin
   }
 
   return (
-    <div
-      className="relative z-10 shrink-0 border-t border-stone-200 bg-white px-6 py-4"
-      style={{ boxShadow: "0 -3px 10px -4px rgba(41,37,36,0.07)" }}
-    >
+    <div className="relative z-10 shrink-0 border-t border-border bg-card px-6 py-4">
       {online === false && (
-        <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-2.5 mb-3">
-          <Server size={12} className="shrink-0 text-amber-500" />
+        <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 border border-warning/20 rounded-2xl px-4 py-2.5 mb-3">
+          <Server size={12} className="shrink-0 text-warning" />
           Backend offline. Run <span className="font-mono">python main.py</span> in the{" "}
           <span className="font-mono">server/</span> folder, then
           <button onClick={onRetry} className="underline font-semibold ml-1">
@@ -53,21 +50,22 @@ export function Composer({ value, onChange, onSubmit, inputRef, isLoading, onlin
         </div>
       )}
 
-      {/* One ring only — the border and the glow are the same accent, never
-          stacked with a Tailwind ring. */}
+      {/* One ring only — the border and the glow are the same accent (theme
+          tokens), never stacked with a second Tailwind ring. */}
       <div
-        className="flex items-end gap-2 border rounded-2xl bg-white transition-all duration-200"
-        style={{
-          borderColor: active ? G.accent : "#e7e5e4",
-          boxShadow: active ? "0 0 0 3px rgba(15,118,110,0.12)" : "0 1px 3px rgba(15,23,42,0.06)",
-        }}
+        className={cn(
+          "flex items-end gap-2 border rounded-2xl bg-card transition-all duration-200",
+          active ? "border-primary ring-[3px] ring-primary/15" : "border-border shadow-sm",
+        )}
       >
         {/* self-start + pt-4 keeps the glyph optically centred on the FIRST
             text line (py-3.5 + half of the 20px line box − half the icon),
             so it stays put as the textarea grows downward. */}
         <div
-          className="self-start shrink-0 flex items-center pl-4 pt-4 transition-colors"
-          style={{ color: active ? G.accent : "#a8a29e" }}
+          className={cn(
+            "self-start shrink-0 flex items-center pl-4 pt-4 transition-colors",
+            active ? "text-primary" : "text-muted-foreground/70",
+          )}
         >
           <Search size={16} />
         </div>
@@ -88,7 +86,7 @@ export function Composer({ value, onChange, onSubmit, inputRef, isLoading, onlin
             canSend ? "Ask anything about your lab data in plain English…" : "Start the backend to begin"
           }
           rows={1}
-          className="flex-1 bg-transparent resize-none overflow-y-auto py-3.5 pr-2 text-sm leading-5 text-stone-900 placeholder-stone-700 focus:outline-none max-h-40"
+          className="flex-1 bg-transparent resize-none overflow-y-auto py-3.5 pr-2 text-sm leading-5 text-foreground placeholder-muted-foreground focus:outline-none max-h-40"
           style={{ scrollbarWidth: "none" }}
         />
 
@@ -100,8 +98,7 @@ export function Composer({ value, onChange, onSubmit, inputRef, isLoading, onlin
             disabled={!canSend || !value.trim() || isLoading}
             aria-label={isLoading ? "Sending…" : "Send message"}
             title="Send message"
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-white hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{ background: G.accent }}
+            className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
           </button>
@@ -109,13 +106,13 @@ export function Composer({ value, onChange, onSubmit, inputRef, isLoading, onlin
       </div>
 
       {canSend && (
-        <div className="flex items-center justify-end gap-1.5 mt-2 px-1 text-[11px] font-medium text-stone-500">
-          <kbd className="font-mono px-1.5 py-0.5 rounded bg-stone-100 border border-stone-200 text-stone-600 text-[10px]">
+        <div className="flex items-center justify-end gap-1.5 mt-2 px-1 text-2xs font-medium text-muted-foreground">
+          <kbd className="font-mono px-1.5 py-0.5 rounded bg-muted border border-border text-muted-foreground text-xxs">
             Enter
           </kbd>
           <span>to send</span>
-          <span className="text-stone-300">·</span>
-          <kbd className="font-mono px-1.5 py-0.5 rounded bg-stone-100 border border-stone-200 text-stone-600 text-[10px]">
+          <span className="text-muted-foreground/40">·</span>
+          <kbd className="font-mono px-1.5 py-0.5 rounded bg-muted border border-border text-muted-foreground text-xxs">
             Shift + Enter
           </kbd>
           <span>for new line</span>

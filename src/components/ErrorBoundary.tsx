@@ -46,14 +46,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
     const label = this.props.label ?? "section";
     return (
-      <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
-        <AlertTriangle size={13} className="mt-0.5 shrink-0 text-amber-500" />
+      <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-xs text-warning">
+        <AlertTriangle size={13} className="mt-0.5 shrink-0 text-warning" />
         <div className="min-w-0 flex-1">
           <p className="font-medium">This {label} could not be displayed.</p>
-          <p className="mt-0.5 font-mono text-[11px] break-words text-amber-700">{error.message}</p>
+          <p className="mt-0.5 font-mono text-2xs break-words text-warning/90">{error.message}</p>
           <button
             onClick={this.reset}
-            className="mt-1.5 font-semibold text-amber-900 underline underline-offset-2"
+            className="mt-1.5 font-semibold text-warning underline underline-offset-2"
           >
             Try again
           </button>

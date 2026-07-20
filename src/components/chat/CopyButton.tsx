@@ -21,9 +21,9 @@ export function CopyButton({ text }: { text: string }) {
       onClick={() => void copy()}
       aria-label={copied ? "Copied" : "Copy answer"}
       title={copied ? "Copied" : "Copy answer"}
-      className="flex items-center justify-center w-6 h-6 rounded-md text-stone-500 hover:text-stone-800 hover:bg-stone-100 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
+      className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
     >
-      {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+      {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
     </button>
   );
 }

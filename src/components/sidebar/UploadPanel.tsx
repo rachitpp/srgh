@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import type { LoadedInfo } from "../../types";
 import { isApiError } from "../../types";
-import { G } from "../../theme";
+import { cn } from "../../lib/utils";
 import { NetworkError, errorMessage, uploadFile } from "../../api/client";
 
 export function UploadPanel({
@@ -91,28 +91,25 @@ export function UploadPanel({
   }
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden shadow-sm">
-      <div className="px-4 py-3 flex items-center gap-2.5 border-b border-stone-100">
-        <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center"
-          style={{ background: G.brandSoft }}
-        >
-          <FileSpreadsheet size={14} className="text-stone-800" />
+    <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+      <div className="px-4 py-3 flex items-center gap-2.5 border-b border-border/60">
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-soft">
+          <FileSpreadsheet size={14} className="text-brand-soft-foreground" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-stone-900">Upload Dataset</p>
-          <p className="text-xs text-stone-700">.xlsx · .xls · .csv</p>
+          <p className="text-sm font-semibold text-foreground">Upload Dataset</p>
+          <p className="text-xs text-muted-foreground">.xlsx · .xls · .csv</p>
         </div>
         {columns && (
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+            <span className="text-xxs font-semibold uppercase tracking-wider text-success bg-success/10 border border-success/20 rounded-full px-2 py-0.5">
               Loaded
             </span>
             <button
               onClick={clear}
               aria-label="Remove dataset"
               title="Remove dataset"
-              className="text-stone-700 hover:text-red-500 transition-colors"
+              className="text-muted-foreground hover:text-destructive transition-colors"
             >
               <Trash2 size={13} />
             </button>
@@ -130,30 +127,32 @@ export function UploadPanel({
             }}
             onDragLeave={() => setDragging(false)}
             onClick={() => inputRef.current?.click()}
-            className="border-2 border-dashed rounded-xl px-4 py-4 flex flex-col items-center gap-2 cursor-pointer transition-all duration-200"
-            style={{
-              borderColor: dragging ? G.accent : "#d6d3d1",
-              background: dragging ? "rgba(15,118,110,0.06)" : "rgba(15,23,42,0.02)",
-            }}
+            className={cn(
+              "border-2 border-dashed rounded-xl px-4 py-4 flex flex-col items-center gap-2 cursor-pointer transition-all duration-200",
+              dragging ? "border-primary bg-primary/5" : "border-border bg-muted/40",
+            )}
           >
             <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
-              style={{ background: dragging ? G.accentSoft : G.brandSoft }}
+              className={cn(
+                "w-9 h-9 rounded-lg flex items-center justify-center transition-colors",
+                dragging ? "bg-primary-soft" : "bg-brand-soft",
+              )}
             >
               <Upload
                 size={17}
-                className="text-stone-800"
-                style={dragging ? { color: G.accent } : undefined}
+                className={dragging ? "text-primary" : "text-brand-soft-foreground"}
               />
             </div>
             <div className="text-center">
               <p
-                className="text-sm font-medium text-stone-800 transition-colors"
-                style={dragging ? { color: G.accent } : undefined}
+                className={cn(
+                  "text-sm font-medium transition-colors",
+                  dragging ? "text-primary" : "text-foreground",
+                )}
               >
                 {dragging ? "Drop to upload" : "Drop your file here"}
               </p>
-              <p className="text-xs text-stone-700 mt-0.5">or click to browse</p>
+              <p className="text-xs text-muted-foreground mt-0.5">or click to browse</p>
             </div>
             <input
               ref={inputRef}
@@ -165,11 +164,11 @@ export function UploadPanel({
           </div>
         ) : columns ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5">
-              <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+            <div className="flex items-center gap-2.5 bg-success/10 border border-success/20 rounded-xl px-3 py-2.5">
+              <CheckCircle2 size={14} className="text-success shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-stone-800 truncate">{file?.name}</p>
-                <p className="text-xs text-stone-800">
+                <p className="text-sm font-medium text-foreground truncate">{file?.name}</p>
+                <p className="text-xs text-muted-foreground">
                   {tableCount > 1
                     ? `${tableCount} tables · ${rows.toLocaleString()} rows`
                     : `${rows.toLocaleString()} rows · ${columns.length} columns`}
@@ -178,19 +177,19 @@ export function UploadPanel({
             </div>
             <button
               onClick={() => setShowPreview((s) => !s)}
-              className="w-full flex items-center justify-between px-3 py-2 text-xs text-stone-800 bg-stone-50 rounded-xl hover:bg-stone-100 transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2 text-xs text-foreground bg-muted rounded-xl hover:bg-muted-foreground/10 transition-colors"
             >
               <span className="font-medium">Preview columns</span>
               <ChevronRight size={12} className={`transition-transform ${showPreview ? "rotate-90" : ""}`} />
             </button>
             {showPreview && (
               <div
-                className="bg-stone-50 rounded-xl p-3 max-h-40 overflow-y-auto space-y-1"
+                className="bg-muted rounded-xl p-3 max-h-40 overflow-y-auto space-y-1"
                 style={{ scrollbarWidth: "thin" }}
               >
                 {columns.map((col) => (
                   <div key={col} className="flex items-center text-xs">
-                    <span className="font-mono text-stone-800 truncate">{col}</span>
+                    <span className="font-mono text-foreground truncate">{col}</span>
                   </div>
                 ))}
               </div>
@@ -198,20 +197,20 @@ export function UploadPanel({
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center gap-2.5 bg-stone-50/60 border border-stone-200 rounded-xl px-3 py-2.5">
-              <FileSpreadsheet size={14} className="text-stone-800 shrink-0" />
+            <div className="flex items-center gap-2.5 bg-muted/60 border border-border rounded-xl px-3 py-2.5">
+              <FileSpreadsheet size={14} className="text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-stone-800 truncate">{file?.name}</p>
-                <p className="text-xs text-stone-700">{((file?.size ?? 0) / 1024).toFixed(1)} KB</p>
+                <p className="text-sm font-medium text-foreground truncate">{file?.name}</p>
+                <p className="text-xs text-muted-foreground">{((file?.size ?? 0) / 1024).toFixed(1)} KB</p>
               </div>
               {!loading && (
-                <button onClick={clear} className="text-stone-700 hover:text-stone-800">
+                <button onClick={clear} className="text-muted-foreground hover:text-foreground">
                   <X size={13} />
                 </button>
               )}
             </div>
             {error && (
-              <div className="flex items-center gap-2 text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+              <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-3 py-2">
                 <AlertCircle size={12} />
                 {error}
               </div>
@@ -219,16 +218,14 @@ export function UploadPanel({
             {!loading ? (
               <button
                 onClick={() => void parse()}
-                className="w-full py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity"
-                style={{ background: G.accent }}
+                className="w-full py-2.5 text-sm font-semibold text-primary-foreground bg-primary rounded-xl hover:opacity-90 transition-opacity"
               >
                 Upload & Load
               </button>
             ) : (
               <button
                 disabled
-                className="w-full py-2.5 text-sm font-semibold text-white rounded-xl opacity-60 flex items-center justify-center gap-2"
-                style={{ background: G.accent }}
+                className="w-full py-2.5 text-sm font-semibold text-primary-foreground bg-primary rounded-xl opacity-60 flex items-center justify-center gap-2"
               >
                 <Loader2 size={13} className="animate-spin" /> Uploading…
               </button>

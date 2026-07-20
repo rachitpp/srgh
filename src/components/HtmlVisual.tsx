@@ -82,5 +82,5 @@ export function HtmlVisual({
   // bare → rendered inside an insight card that already has a border; fill →
   // rendered inside a dashboard widget shell that owns the chrome.
   if (bare || fill) return body;
-  return <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">{body}</div>;
+  return <div className="bg-card border border-border rounded-2xl overflow-hidden">{body}</div>;
 }

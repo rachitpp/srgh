@@ -1,5 +1,5 @@
 import { Microscope } from "lucide-react";
-import { G, FLAT_SUGGESTIONS } from "../../theme";
+import { FLAT_SUGGESTIONS } from "../../theme";
 
 export function EmptyState({
   hasData,
@@ -13,15 +13,12 @@ export function EmptyState({
   return (
     <div className="m-auto flex flex-col items-center gap-7 px-6 py-10 text-center">
       <div className="flex flex-col items-center gap-4">
-        <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm"
-          style={{ background: G.accentSoft }}
-        >
-          <Microscope size={30} style={{ color: G.accent }} />
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm bg-primary-soft">
+          <Microscope size={30} className="text-primary" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-stone-900 tracking-tight">SGRH Lab Assistant</h2>
-          <p className="text-[15px] text-stone-600 max-w-md leading-relaxed mx-auto">
+          <h2 className="text-2xl font-bold text-foreground tracking-tight">SGRH Lab Assistant</h2>
+          <p className="text-[15px] text-muted-foreground max-w-md leading-relaxed mx-auto">
             {online === false
               ? "Backend offline — start the FastAPI server, then upload a file or connect a database."
               : hasData
@@ -32,7 +29,7 @@ export function EmptyState({
       </div>
       {online !== false && (
         <div className="w-full max-w-lg">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 mb-3 text-center">
+          <p className="text-2xs font-bold uppercase tracking-widest text-muted-foreground mb-3 text-center">
             {hasData ? "Try asking" : "Example questions"}
           </p>
           <div className="grid grid-cols-2 gap-2.5">
@@ -40,15 +37,17 @@ export function EmptyState({
               <button
                 key={q}
                 onClick={() => onPrompt(q)}
-                className="flex flex-col gap-1.5 text-left px-3.5 py-3 rounded-2xl border border-stone-200 bg-white shadow-sm hover:border-stone-300 hover:shadow-md hover:-translate-y-px transition-all duration-150 group"
+                className="flex flex-col gap-1.5 text-left px-3.5 py-3 rounded-2xl border border-border bg-card shadow-sm hover:border-muted-foreground/30 hover:shadow-md hover:-translate-y-px transition-all duration-150 group"
               >
+                {/* `color` is the metric-domain colour (data, shared with the
+                    backend charts), so it stays an inline style. */}
                 <span className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
+                  <span className="text-xxs font-bold uppercase tracking-wider" style={{ color }}>
                     {label}
                   </span>
                 </span>
-                <span className="text-xs text-stone-800 group-hover:text-stone-900 leading-snug transition-colors">
+                <span className="text-xs text-foreground/90 group-hover:text-foreground leading-snug transition-colors">
                   {q}
                 </span>
               </button>

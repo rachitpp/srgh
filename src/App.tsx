@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PanelLeft, Trash2 } from "lucide-react";
 
 import type { DbStatus, LoadedInfo, Message, Visual, Widget } from "./types";
-import { G, detectMetric } from "./theme";
+import { detectMetric } from "./theme";
 import { NetworkError, askChat, askTable, checkStatus, errorMessage } from "./api/client";
 import { isTableRequest, uid } from "./lib/utils";
 
@@ -168,10 +168,7 @@ export default function App() {
     : undefined;
 
   return (
-    <div
-      className="h-screen flex flex-col overflow-hidden"
-      style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif", background: G.page }}
-    >
+    <div className="h-screen flex flex-col overflow-hidden bg-background">
       <Header
         view={view}
         onViewChange={setView}
@@ -198,19 +195,19 @@ export default function App() {
               button only wipes its own section, never the other. The reopen-
               sidebar button also lives here (when collapsed) so it can't overlap
               the section label. */}
-          <div className="shrink-0 h-11 border-b border-stone-200 bg-white flex items-center justify-between px-4">
+          <div className="shrink-0 h-11 border-b border-border bg-card flex items-center justify-between px-4">
             <div className="flex items-center gap-2">
               {!sidebarOpen && (
                 <button
                   onClick={() => setSidebarOpen(true)}
                   aria-label="Show sidebar"
                   title="Show sidebar"
-                  className="-ml-1.5 w-7 h-7 rounded-lg flex items-center justify-center text-stone-800 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                  className="-ml-1.5 w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <PanelLeft size={16} />
                 </button>
               )}
-              <span className="text-[11px] font-bold uppercase tracking-widest text-stone-700">
+              <span className="text-2xs font-bold uppercase tracking-widest text-muted-foreground">
                 {view === "chat" ? "Conversation" : "Dashboard"}
               </span>
             </div>
@@ -218,7 +215,7 @@ export default function App() {
               onClick={view === "chat" ? clearChat : clearDashboard}
               disabled={view === "chat" ? !messages.length : !widgets.length}
               title={view === "chat" ? "Clear conversation" : "Clear dashboard"}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-stone-800 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:hover:text-stone-800 disabled:hover:bg-transparent"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-2xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40 disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
             >
               <Trash2 size={12} /> {view === "chat" ? "Clear chat" : "Clear dashboard"}
             </button>

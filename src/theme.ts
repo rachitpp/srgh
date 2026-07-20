@@ -1,15 +1,10 @@
-// Design tokens and the metric-domain colour system. Pure data — no React.
-
-// Clean clinical palette — white content canvas, cool light-grey chrome, a single
-// teal accent. Cool slate ink instead of warm charcoal. No gradients, no glow.
-export const G = {
-  brand: "#0f172a", // cool slate ink — logo tiles, message avatars
-  brandSoft: "#eef2f7", // cool light grey for icon tiles / soft fills
-  page: "#ffffff", // clean white content canvas
-  accent: "#0f766e", // clinical teal — the single action/identity accent
-  accentSoft: "#e6f4f2", // soft teal wash for accented tiles / highlights
-  panel: "#f4f6f9", // cool light grey sidebar — recessed a step below content
-};
+// The metric-domain colour system. Pure data — no React.
+//
+// App chrome colours (surfaces, ink, the teal accent, brand tiles) are NOT here:
+// they live as CSS variables in src/styles/theme.css and are used through semantic
+// Tailwind utilities (bg-primary, bg-brand, text-muted-foreground…). What remains
+// below are the per-answer DOMAIN colours — chosen at runtime by regex, matched to
+// the backend's chart palette — which are genuine data, not theme chrome.
 
 // Maps an answer to its metric domain so the insight card's tag + accent match
 // the chart colors (same hex values as the sidebar groups / server tokens).

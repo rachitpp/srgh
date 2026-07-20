@@ -1,4 +1,13 @@
 // Small pure helpers shared across components.
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+// Compose class names with conditional parts, then de-conflict overlapping
+// Tailwind utilities (a later `px-3` wins over an earlier `px-2`). Lets callers
+// pass overrides without worrying about class order.
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export function uid() {
   return Math.random().toString(36).slice(2, 10);

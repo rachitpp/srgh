@@ -2,9 +2,11 @@
 @import "./tailwind.css";
 @import "./theme.css";
 
-/* Slightly larger base type — every rem-based (Tailwind) size scales from this. */
+/* Slightly larger base type — every rem-based (Tailwind) size scales from this.
+   Exposed as --font-size so the @layer base fallback in theme.css stays in sync. */
 html {
-  font-size: 17px;
+  --font-size: 17px;
+  font-size: var(--font-size);
 }
 
 /* Unified typography — matches the backend-rendered visuals (FONT_UI / FONT_MONO
@@ -34,7 +36,7 @@ a:not([data-custom-focus]):focus-visible,
 input:not([data-custom-focus]):focus-visible,
 textarea:not([data-custom-focus]):focus-visible,
 select:not([data-custom-focus]):focus-visible {
-  outline: 2px solid #0f766e;
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
   border-radius: 8px;
 }
@@ -45,7 +47,7 @@ select:not([data-custom-focus]):focus-visible {
    intent in Chromium too, so the look is consistent across browsers. */
 * {
   scrollbar-width: thin; /* Firefox */
-  scrollbar-color: rgba(41, 37, 36, 0.28) transparent;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 45%, transparent) transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
@@ -55,11 +57,11 @@ select:not([data-custom-focus]):focus-visible {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(41, 37, 36, 0.22);
+  background: color-mix(in srgb, var(--muted-foreground) 35%, transparent);
   border-radius: 8px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(41, 37, 36, 0.4);
+  background: color-mix(in srgb, var(--muted-foreground) 60%, transparent);
 }
 /* Elements that opt out via inline scrollbar-width:none stay fully hidden. */
 [style*="scrollbar-width: none"]::-webkit-scrollbar {

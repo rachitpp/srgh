@@ -28,6 +28,21 @@
         height: 100%;
       }
     </style>
+    <!-- Set the colour theme before first paint so there is no light→dark flash.
+         Mirrors the logic in src/lib/theme-mode.ts (stored choice, else system). -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("sgrh-theme");
+          var dark = stored
+            ? stored === "dark"
+            : window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.classList.toggle("dark", dark);
+        } catch (e) {
+          /* storage/matchMedia unavailable — default to light */
+        }
+      })();
+    </script>
   </head>
 
   <body>
