@@ -71,10 +71,10 @@ export function DashWidget({
         onPointerDown={(e) => begin("move", e)}
         className="shrink-0 flex items-center justify-between gap-2 px-3 h-8 border-b border-border/60 bg-muted/70 cursor-move select-none"
       >
-        {/* widget.color is the metric-domain colour (data), so it stays inline. */}
+        {/* widget.color is the metric-domain colour (data): a CSS var, per-mode. */}
         <span
           className="w-1.5 h-1.5 rounded-full shrink-0"
-          style={{ background: widget.color || "#0A5F67" }}
+          style={{ background: widget.color || "var(--metric-service)" }}
         />
         <GripHorizontal size={13} className="text-muted-foreground/70 shrink-0" />
         <button

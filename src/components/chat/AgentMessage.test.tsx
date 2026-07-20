@@ -77,15 +77,22 @@ describe("pinning", () => {
   });
 });
 
+// The metadata footer carries the timestamp always, and appends the source note
+// only when the answer has visuals — so these assert on substrings of one line.
 describe("source note", () => {
   it("is shown when the answer carries visuals", () => {
     const msg = base({ text: "x", visuals: [{ id: "card", chart_html: "<div/>" }] });
     render(<AgentMessage msg={msg} sourceNote="file · 2 tables · 900 rows" />);
-    expect(screen.getByText("file · 2 tables · 900 rows")).toBeInTheDocument();
+    expect(screen.getByText(/file · 2 tables · 900 rows/)).toBeInTheDocument();
   });
 
   it("is omitted for a text-only answer", () => {
     render(<AgentMessage msg={base({ text: "no visuals" })} sourceNote="file · 2 tables · 900 rows" />);
-    expect(screen.queryByText("file · 2 tables · 900 rows")).not.toBeInTheDocument();
+    expect(screen.queryByText(/file · 2 tables · 900 rows/)).not.toBeInTheDocument();
+  });
+
+  it("still records the time on a text-only answer", () => {
+    render(<AgentMessage msg={base({ text: "no visuals" })} />);
+    expect(screen.getByText(/\d{1,2}:\d{2}/)).toBeInTheDocument();
   });
 });

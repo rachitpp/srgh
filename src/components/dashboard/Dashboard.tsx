@@ -39,18 +39,23 @@ export function Dashboard({
 
   const canvasH = Math.max(600, ...widgets.map((w) => w.y + w.h + 80));
   return (
-    <div className="flex-1 overflow-auto p-6 bg-background">
-      {/* dot grid — signals a movable canvas and makes the snap-to-grid legible.
-          The dot colour is the --grid-dot token so it stays visible in dark mode. */}
-      <div
-        className="relative mx-auto"
-        style={{
-          minHeight: canvasH,
-          maxWidth: 1400,
-          backgroundImage: "radial-gradient(circle, var(--grid-dot) 1px, transparent 1px)",
-          backgroundSize: `${GRID}px ${GRID}px`,
-        }}
-      >
+    /* The dot grid lives on the scroll container, not on the inner canvas, so it
+       always covers the full viewport: an inner element only paints as far as its
+       own box, which left bare margins wherever the canvas was smaller than the
+       area (short widget stacks, wide screens). `local` attachment keeps the dots
+       travelling with the widgets while scrolling instead of sitting still
+       underneath them. The colour is the --grid-dot token, so it follows the theme. */
+    <div
+      className="flex-1 overflow-auto bg-background"
+      style={{
+        backgroundImage: "radial-gradient(circle, var(--grid-dot) 1px, transparent 1px)",
+        backgroundSize: `${GRID}px ${GRID}px`,
+        backgroundAttachment: "local",
+      }}
+    >
+      {/* No padding or max-width here: both would offset widget coordinates from
+          the grid origin, so a snapped widget would stop landing on the dots. */}
+      <div className="relative" style={{ minHeight: canvasH }}>
         {widgets.map((w) => (
           <DashWidget key={w.wid} widget={w} onChange={update} onRemove={() => remove(w.wid)} />
         ))}

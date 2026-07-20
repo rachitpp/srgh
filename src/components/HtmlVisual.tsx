@@ -70,7 +70,10 @@ export function HtmlVisual({
   const isChart = id === "bar" || id === "pie" || id === "line";
   // fill → the parent (a dashboard cell) controls the size; the chart stretches
   // to 100% and the ResizeObserver above reflows Plotly to match.
-  const height = fill ? "100%" : id === "table" ? 460 : isChart ? 400 : undefined;
+  // A pie carries the same information at any size, so 400px just buys dead space
+  // either side of the circle; bar/line genuinely use the extra height for
+  // categories and time steps.
+  const height = fill ? "100%" : id === "table" ? 460 : id === "pie" ? 340 : isChart ? 400 : undefined;
 
   const body = (
     <div

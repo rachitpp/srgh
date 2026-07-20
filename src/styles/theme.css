@@ -58,45 +58,93 @@
   --radius: 0.75rem;
   --font-weight-normal: 400;
   --font-weight-medium: 500;
+
+  /* Metric-domain colours. These are DATA, not chrome: they identify Service /
+     Revenue / TAT / Cost wherever that domain appears (sidebar dots, insight
+     card tags, dashboard widget accents). They live here rather than in
+     theme.ts so each mode gets its own steps — a dark canvas needs different
+     values, not the same hexes dimmed.
+     Light values are unchanged, and still match the chart palette hardcoded in
+     server/main.py. See the .dark block for the re-stepped dark set. */
+  --metric-service: #0a5f67;
+  --metric-revenue: #1a7350;
+  --metric-tat: #996a26;
+  --metric-cost: #983b40;
 }
 
+/* 14% washes behind metric tags. Derived from the metric colours above, so they
+   follow whichever mode is active instead of needing a parallel hardcoded set. */
+:root,
 .dark {
-  --background: #0f172a;
-  --foreground: #e2e8f0;
-  --card: #1e293b;
-  --card-foreground: #e2e8f0;
-  --popover: #1e293b;
-  --popover-foreground: #e2e8f0;
+  --metric-service-soft: color-mix(in srgb, var(--metric-service) 14%, transparent);
+  --metric-revenue-soft: color-mix(in srgb, var(--metric-revenue) 14%, transparent);
+  --metric-tat-soft: color-mix(in srgb, var(--metric-tat) 14%, transparent);
+  --metric-cost-soft: color-mix(in srgb, var(--metric-cost) 14%, transparent);
+}
 
-  --primary: #14b8a6; /* brighter teal reads better on dark */
-  --primary-foreground: #04211d;
-  --primary-soft: #10312e;
+/* Dark palette: "warm graphite" — warm near-neutral surfaces under a cool teal
+   accent. The temperature contrast (warm ground / cool accent) is what stops it
+   reading as a stock cold-blue dashboard theme.
 
-  --secondary: #1e293b;
-  --secondary-foreground: #cbd5e1;
-  --muted: #172033;
-  --muted-foreground: #94a3b8;
+   The surface ramp deliberately widens as it rises — L* 5.1 → 8.8 → 13.0 → 18.3
+   → 26.6, i.e. steps of +3.7 / +4.2 / +5.3 / +8.3. Even steps read as computed;
+   an expanding ramp is how elevation actually looks, and it buys the cards a
+   9.5-point separation from the canvas so they read as objects, not smudges. */
+.dark {
+  --background: #1a1917; /* canvas */
+  --foreground: #ece7e1; /* warm off-white, never pure #fff */
+  --card: #302c29; /* elevated: warmer and lighter than the canvas */
+  --card-foreground: #ece7e1;
+  --popover: #302c29;
+  --popover-foreground: #ece7e1;
 
-  --accent: #10312e;
-  --accent-foreground: #5eead4;
+  /* The accent is spent sparingly: --primary is for the one real action on a
+     screen (Connect, Send). Identity chrome uses --brand, so a logo tile never
+     competes with a submit button. */
+  --primary: #34b3a0;
+  --primary-foreground: #06221e;
+  --primary-soft: #17322e;
 
-  --destructive: #f87171;
-  --destructive-foreground: #1a0b0b;
-  --success: #34d399;
-  --success-foreground: #052e22;
-  --warning: #fbbf24;
-  --warning-foreground: #2a1a02;
+  --secondary: #302c29;
+  --secondary-foreground: #cfc8c0;
+  --muted: #242120;
+  --muted-foreground: #a29a91; /* warm grey — 6.3:1 on canvas, 5.0:1 on card */
 
-  --brand: #334155; /* slate tile stays visible against the dark canvas */
-  --brand-foreground: #e2e8f0;
-  --brand-soft: #1e293b;
-  --brand-soft-foreground: #cbd5e1;
+  --accent: #17322e;
+  --accent-foreground: #6fd6c4;
 
-  --border: #24324a;
+  --destructive: #e8705f;
+  --destructive-foreground: #1f0d0a;
+  --success: #4fbb87;
+  --success-foreground: #06231a;
+  --warning: #d99a3f;
+  --warning-foreground: #241704;
+
+  /* Quiet warm tile — identity without shouting. */
+  --brand: #322d2a;
+  --brand-foreground: #ece7e1;
+  --brand-soft: #262220;
+  --brand-soft-foreground: #cfc8c0;
+
+  --border: #443e39;
   --input: transparent;
-  --ring: #14b8a6;
-  --panel: #0b1322;
-  --grid-dot: rgba(148, 163, 184, 0.14);
+  --ring: #34b3a0;
+  --panel: #121110; /* recessed sidebar, the deepest surface */
+  --grid-dot: rgba(236, 231, 225, 0.1);
+
+  /* Metric colours, re-stepped for dark (see the :root block for the rationale).
+     Validated against the card surface #302c29: all four inside the dark L band,
+     above the chroma floor, worst all-pairs CVD ΔE 9.1 (deutan), normal-vision
+     ΔE 17.8. The three warm hues are spaced by LIGHTNESS (L 0.485 / 0.575 / 0.67)
+     because deuteranopia collapses green↔amber↔rose into one axis — hue alone
+     cannot separate them.
+     Cost sits at 1.95:1 against the card, under the 3:1 bar; the relief is that
+     every dot ships beside its visible text label, so colour is never the sole
+     carrier of identity. Keep those labels. */
+  --metric-service: #0486d3;
+  --metric-revenue: #01b25b;
+  --metric-tat: #a46b04;
+  --metric-cost: #b3022d;
 }
 
 /* Expose the tokens above to Tailwind so `bg-card`, `text-muted-foreground`,

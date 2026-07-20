@@ -53,26 +53,27 @@ export function AgentMessage({
       <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-brand">
         <FlaskConical size={15} className="text-brand-foreground" />
       </div>
-      <div className="flex-1 min-w-0 max-w-4xl">
+      {/* Visual answers need the width for charts and wide tables. A text-only
+          answer does not: letting it stretch to max-w-4xl strands the timestamp
+          a screen away from a one-line reply. Dropping flex-1 lets the card size
+          to its content and only wrap once it hits the reading-width cap. */}
+      <div className={cn("min-w-0", hasVisuals ? "flex-1 max-w-4xl" : "max-w-2xl")}>
         {/* metric-color spine — a quiet accent that colour-codes the answer by
             domain (matches the tag + the dashboard widget dots) for fast scanning.
             The metric colour is per-answer DATA (chosen by regex, shared with the
-            backend charts), so it stays an inline style rather than a theme token. */}
+            backend charts), so it stays inline — but resolves a per-mode CSS var. */}
         <div
           className="group bg-card border border-border rounded-2xl rounded-tl-sm overflow-hidden shadow-sm"
           style={{ borderLeftWidth: 3, borderLeftColor: metric.color }}
         >
-          <div className="flex items-center justify-between px-4 pt-3">
+          <div className="flex items-center justify-between gap-6 px-4 pt-3">
             <span
               className="text-xxs font-semibold uppercase tracking-widest px-2 py-0.5 rounded-md"
-              style={{ color: metric.color, background: `${metric.color}14` }}
+              style={{ color: metric.color, background: metric.soft }}
             >
               {metric.tag}
             </span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-2xs text-muted-foreground font-mono">{fmt(msg.timestamp)}</span>
-              {msg.text && <CopyButton text={msg.text} />}
-            </div>
+            {msg.text && <CopyButton text={msg.text} />}
           </div>
           {msg.text && (
             <p className="px-4 pt-2.5 pb-3.5 text-[15px] font-medium text-foreground leading-relaxed whitespace-pre-wrap">
@@ -107,16 +108,19 @@ export function AgentMessage({
               </div>
             );
           })}
-          {/* Data-source provenance — the header status pill already shows the
-              live source, so we keep this per-answer note but reveal it only on
-              hover to stop it repeating as noise under every card. */}
-          {hasVisuals && sourceNote && (
-            <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr] transition-[grid-template-rows] duration-200">
-              <div className="overflow-hidden">
-                <p className="px-4 pb-2.5 pt-1 text-2xs text-muted-foreground font-mono">{sourceNote}</p>
-              </div>
-            </div>
-          )}
+          {/* Answer metadata — time, and the data-source provenance when there are
+              visuals. Both are reference material rather than content: the chat is
+              not persisted (it lives in React state only), so every timestamp is
+              from the session you are already watching. Revealing them on hover
+              keeps them available without repeating under every card. */}
+          {/* Fades rather than expands. Animating the height (grid-rows 0fr→1fr)
+              reflows everything below the card on hover, so pointing at one answer
+              nudges the next one down the page. The row keeps its space at all
+              times and only the ink changes. */}
+          <p className="px-4 pb-2.5 pt-1 text-2xs text-muted-foreground font-mono opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {fmt(msg.timestamp)}
+            {hasVisuals && sourceNote ? ` · ${sourceNote}` : ""}
+          </p>
         </div>
       </div>
     </div>

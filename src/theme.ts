@@ -7,16 +7,45 @@
 // the backend's chart palette — which are genuine data, not theme chrome.
 
 // Maps an answer to its metric domain so the insight card's tag + accent match
-// the chart colors (same hex values as the sidebar groups / server tokens).
-export const METRIC_TAGS: { tag: string; color: string; re: RegExp }[] = [
-  { tag: "TAT", color: "#996A26", re: /\btat\b|turnaround|delay/i },
-  { tag: "Cost", color: "#983B40", re: /expense|expenditure|cost|spend/i },
-  { tag: "Revenue", color: "#1A7350", re: /revenue|income|billed|billing|payor|collection/i },
-  { tag: "Service", color: "#0A5F67", re: /test|service|doctor|department|patient|sample|unit/i },
+// the chart colors. The colours themselves are CSS variables (defined per mode in
+// styles/theme.css) rather than hexes, so light and dark each get values stepped
+// for their own surface instead of one set dimmed to fit both. `soft` is the 14%
+// wash used behind tag pills.
+export const METRIC_TAGS: { tag: string; color: string; soft: string; re: RegExp }[] = [
+  {
+    tag: "TAT",
+    color: "var(--metric-tat)",
+    soft: "var(--metric-tat-soft)",
+    re: /\btat\b|turnaround|delay/i,
+  },
+  {
+    tag: "Cost",
+    color: "var(--metric-cost)",
+    soft: "var(--metric-cost-soft)",
+    re: /expense|expenditure|cost|spend/i,
+  },
+  {
+    tag: "Revenue",
+    color: "var(--metric-revenue)",
+    soft: "var(--metric-revenue-soft)",
+    re: /revenue|income|billed|billing|payor|collection/i,
+  },
+  {
+    tag: "Service",
+    color: "var(--metric-service)",
+    soft: "var(--metric-service-soft)",
+    re: /test|service|doctor|department|patient|sample|unit/i,
+  },
 ];
 
 export function detectMetric(text: string) {
-  return METRIC_TAGS.find((m) => m.re.test(text)) ?? { tag: "Insight", color: "#0A5F67" };
+  return (
+    METRIC_TAGS.find((m) => m.re.test(text)) ?? {
+      tag: "Insight",
+      color: "var(--metric-service)",
+      soft: "var(--metric-service-soft)",
+    }
+  );
 }
 
 // Quick queries grouped by metric domain. Each group's dot color matches the
@@ -26,7 +55,7 @@ export function detectMetric(text: string) {
 export const QUERY_GROUPS: { label: string; color: string; queries: string[] }[] = [
   {
     label: "Revenue",
-    color: "#1A7350",
+    color: "var(--metric-revenue)",
     queries: [
       "Revenue share of OPD vs IPD patients", // → pie
       "What is the revenue share by billing payor type?", // → pie
@@ -35,7 +64,7 @@ export const QUERY_GROUPS: { label: string; color: string; queries: string[] }[]
   },
   {
     label: "Turnaround Time",
-    color: "#996A26",
+    color: "var(--metric-tat)",
     queries: [
       "Average turnaround time (TAT)", // → card
       "Which department has the longest TAT?", // → bar
@@ -43,7 +72,7 @@ export const QUERY_GROUPS: { label: string; color: string; queries: string[] }[]
   },
   {
     label: "Cost",
-    color: "#983B40",
+    color: "var(--metric-cost)",
     queries: [
       "Expense breakdown by category", // → bar/pie
       "Compare monthly laboratory expenses", // → line
@@ -51,7 +80,7 @@ export const QUERY_GROUPS: { label: string; color: string; queries: string[] }[]
   },
   {
     label: "Masters",
-    color: "#0A5F67",
+    color: "var(--metric-service)",
     queries: [
       "List all biochemistry test sets", // → table
       "Count of doctors by specialty", // → pie

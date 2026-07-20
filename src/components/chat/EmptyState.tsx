@@ -39,11 +39,13 @@ export function EmptyState({
                 onClick={() => onPrompt(q)}
                 className="flex flex-col gap-1.5 text-left px-3.5 py-3 rounded-2xl border border-border bg-card shadow-sm hover:border-muted-foreground/30 hover:shadow-md hover:-translate-y-px transition-all duration-150 group"
               >
-                {/* `color` is the metric-domain colour (data, shared with the
-                    backend charts), so it stays an inline style. */}
+                {/* The dot carries the metric identity (a per-mode CSS var); the
+                    label stays on a text token. Tinting small caps with the series
+                    colour costs real legibility — Cost sits at 1.95:1 on the dark
+                    card — and the dot beside it already says which domain it is. */}
                 <span className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
-                  <span className="text-xxs font-bold uppercase tracking-wider" style={{ color }}>
+                  <span className="text-xxs font-bold uppercase tracking-wider text-muted-foreground">
                     {label}
                   </span>
                 </span>

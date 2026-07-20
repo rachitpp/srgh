@@ -12,8 +12,7 @@ from psycopg2 import Error as PostgresError
 from pydantic import BaseModel
 from typing import Optional
 from fastmcp import FastMCP
-from google import genai
-from google.genai import types as genai_types
+from openai import OpenAI
 import os
 
 # Load .env (optional) before reading any configuration.
@@ -25,17 +24,16 @@ except ImportError:
 
 app = FastAPI()
 
-# ── Configuration (env-driven, with the original project defaults) ────────────
-CREDENTIALS_PATH = os.environ.get(
-    "GOOGLE_APPLICATION_CREDENTIALS",
-    r"C:\Users\Rachit\Music\Biometric Laboratory Dashboard (1)\server\project-a7f31721-c4d9-43f4-a9b-735f6ff27b0a.json",
+# ── Configuration (env-driven) ───────────────────────────────────────────────
+# Azure exposes an OpenAI-compatible "v1" surface; the base_url must keep its
+# trailing /openai/v1/ for the stock client to resolve endpoints correctly.
+AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY", "")
+AZURE_OPENAI_BASE_URL = os.environ.get(
+    "AZURE_OPENAI_BASE_URL", "https://sgrh2.openai.azure.com/openai/v1/"
 )
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = CREDENTIALS_PATH
-GCP_PROJECT = os.environ.get("GCP_PROJECT", "project-a7f31721-c4d9-43f4-a9b")
-GCP_LOCATION = os.environ.get("GCP_LOCATION", "global")
-# NOTE: "gemini-3.5-flash" is kept as the default to match the original project.
-# If the API returns a 404 for the model, set GEMINI_MODEL=gemini-2.5-flash (or similar).
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+# Azure routes by *deployment* name, not by model id — this is the name given to
+# the deployment in the Azure portal.
+LLM_DEPLOYMENT = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.6-sol")
 
 app.add_middleware(
     CORSMiddleware,
@@ -68,7 +66,7 @@ mcp = FastMCP(
     ),
 )
 
-# ── Domain glossary — injected into every /chat prompt so Gemini reliably
+# ── Domain glossary — injected into every /chat prompt so the model reliably
 # maps user questions to the right columns regardless of exact schema naming ──
 LAB_DOMAIN_CONTEXT = """
 DOMAIN CONTEXT — You are analyzing operational data for a BIOCHEMISTRY LAB (part of a
@@ -154,7 +152,7 @@ def get_table_data(table: str = "", limit: int = 20) -> str:
 @mcp.tool()
 def query_data(question: str) -> str:
     """
-    Answer a natural-language question about the loaded lab data (one or more tables) using Gemini.
+    Answer a natural-language question about the loaded lab data (one or more tables) using the configured LLM.
     Understands Cost, Revenue, Service, and TAT (Turnaround Time) terminology for a Biochemistry Lab.
     Returns a plain-text answer with exact numbers computed by Python where possible.
     """
@@ -177,12 +175,7 @@ Question: {question}
 Reply in plain text only. Use exact numbers from the pre-computed stats above. If the question
 requires relating rows across tables, reason carefully using shared column values as keys.
 """
-    resp = model.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config=genai_types.GenerateContentConfig(temperature=0.0),
-    )
-    return resp.text.strip()
+    return _complete(prompt).strip()
 
 
 @mcp.tool()
@@ -378,17 +371,31 @@ def _run_mcp():
 mcp_thread = threading.Thread(target=_run_mcp, daemon=True)
 mcp_thread.start()
 # MCP SSE endpoint: http://localhost:8001/sse
-client = genai.Client(
-    vertexai=True,
-    project=GCP_PROJECT,
-    location=GCP_LOCATION,
+client = OpenAI(
+    api_key=AZURE_OPENAI_API_KEY,
+    base_url=AZURE_OPENAI_BASE_URL,
 )
-model = client.models
+
+
+def _complete(prompt: str) -> str:
+    """Single-shot prompt → text, and the only place that knows the LLM vendor.
+
+    Both callers want the same thing (one prompt in, plain text out), so the
+    provider details stay here: swapping vendors again means editing this
+    function, not the analysis code that calls it.
+
+    Note: the Vertex implementation this replaces pinned temperature=0 for
+    determinism. Azure's reasoning deployments reject the parameter outright,
+    so exactness now rests on the prompts feeding pre-computed stats and
+    forbidding recalculation (see build_stats_block).
+    """
+    response = client.responses.create(model=LLM_DEPLOYMENT, input=prompt)
+    return response.output_text
 
 # Session stores DataFrames so table rendering never needs to re-parse CSV.
 # "dfs": every loaded table, keyed by (schema-qualified) name → DataFrame
 # "df": the currently "active" table (used by /table endpoint default & legacy tools)
-# "csv_context": combined, tagged CSV text across all loaded tables, fed to Gemini
+# "csv_context": combined, tagged CSV text across all loaded tables, fed to the model
 session_data: dict = {
     "df": None,
     "dfs": {},
@@ -522,7 +529,7 @@ def build_stats_block(dfs: dict, max_groups: int = 12, max_cat_cols: int = 5) ->
 
 def build_combined_context(dfs: dict, max_rows_per_table: int = 200) -> str:
     """Builds one CSV-like text blob covering every loaded table, each tagged
-    with a '### TABLE: name' header so Gemini can tell them apart."""
+    with a '### TABLE: name' header so the model can tell them apart."""
     parts = []
     for name, df in dfs.items():
         parts.append(f"### TABLE: {name}\n{df.head(max_rows_per_table).to_csv(index=False)}")
@@ -778,7 +785,7 @@ async def upload_file(file: UploadFile = File(...)):
       than just the first sheet.
 
     All rows are kept — no row cap — so /table and the computed stats reflect the
-    complete dataset. The Gemini prompt is sampled separately inside
+    complete dataset. The model prompt is sampled separately inside
     build_combined_context (max_rows_per_table), so full-fidelity storage here does
     not bloat the LLM context.
     """
@@ -888,15 +895,19 @@ DESIGN SYSTEM — use EXACTLY these values, this is a clinical/precision-instrum
   UI font: {FONT_UI}    Numeric/data font: {FONT_MONO}
 
 CHART HTML RULES:
-17. FOR card, use EXACTLY this pattern (swap Label/Value; pick the left-border/accent color based on
-    what the KPI represents — {ROSE} for Cost, {GREEN} for Revenue, {TEAL} for Service, {AMBER} for TAT,
-    default to {TEAL} if unclear):
-    <div style="display:flex;flex-direction:column;justify-content:center;height:100%;padding:18px 22px;border-left:4px solid ACCENT_COLOR;background:{SURFACE};box-sizing:border-box;"><p style="font-family:{FONT_UI};font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:{SLATE_TEXT};margin:0 0 8px 0;font-weight:600;">Label</p><h2 style="font-family:{FONT_MONO};font-size:32px;color:{INK};margin:0;font-weight:600;">Value</h2></div>
+17. FOR card, use EXACTLY this pattern (swap Label/Value only — do NOT add a border,
+    a background colour, or an accent stripe: the surrounding insight card already
+    carries the metric colour, and a second rule inside it reads as a broken border.
+    The var(--…) colours are deliberate — they let the KPI follow the app's light/dark
+    theme instead of being pinned to one palette. Emit them literally):
+    <div style="display:flex;flex-direction:column;justify-content:center;height:100%;padding:16px;background:transparent;box-sizing:border-box;"><p style="font-family:{FONT_UI};font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted-foreground);margin:0 0 8px 0;font-weight:600;">Label</p><h2 style="font-family:{FONT_MONO};font-size:32px;color:var(--foreground);margin:0;font-weight:600;">Value</h2></div>
 
 18. FOR bar/pie/line use EXACTLY this pattern (replace UID with 8 random alphanumeric chars):
     <div id="chart_UID" style="width:100%;height:100%;"></div><script>var data=[...];var layout={{title:"",autosize:true,font:{{color:"{INK}",size:11,family:"{FONT_UI}"}},paper_bgcolor:"{SURFACE}",plot_bgcolor:"{SURFACE}",margin:{{t:40,b:70,l:110,r:20,pad:10}},xaxis:{{automargin:true}},yaxis:{{automargin:true}},legend:{{orientation:"h",y:-0.25}}}};Plotly.newPlot("chart_UID",data,layout,{{responsive:true,displayModeBar:false}});</script>
     (margin.pad keeps a clear gap between axis labels and the bars; automargin prevents long
-    category labels from being clipped. For pie charts omit the xaxis/yaxis keys.)
+    category labels from being clipped. For pie charts omit the xaxis/yaxis keys AND use
+    symmetric margins {{t:40,b:60,l:20,r:20,pad:0}} — the l:110 above exists to fit bar-chart
+    category labels, and on a pie it just shoves the circle off-centre.)
 
 19. Plotly.newPlot first argument MUST be the string id "chart_UID" — never a variable.
 20. Each visual must have a unique UID — never reuse the same id.
@@ -906,6 +917,8 @@ CHART HTML RULES:
     text to the formatted values (currency/number, matching the "text" rules above), textposition:"outside",
     cliponaxis:false, and textfont:{{family:"{FONT_MONO}",size:11,color:"{INK}"}}. Because the labels sit
     outside the bars, for bar charts ONLY override the right margin to margin.r:70 so the labels are not clipped.
+    ALSO set bargap:0.45 on the layout for bar charts: at the default gap the bars nearly touch and
+    the chart reads as a solid block rather than as separate measurements.
     For pie charts use hole:0.35, textinfo:"percent",
     textposition:"inside", insidetextorientation:"horizontal", automargin:true, and
     marker.colors:["{TEAL}","{INK}","{AMBER}","{ROSE}","{GREEN}","#5F708A","{SLATE_TEXT}"].
@@ -914,14 +927,7 @@ CHART HTML RULES:
     inside a small slice is hidden instead of overflowing the chart area.
 """
     try:
-        response = model.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-            # temperature=0 → deterministic: the same question over the same data
-            # returns the same numbers every time.
-            config=genai_types.GenerateContentConfig(temperature=0.0),
-        )
-        raw = response.text
+        raw = _complete(prompt)
         print(raw)
         clean = re.sub(r'```json\s?|\s?```', '', raw).strip()
         s, e = clean.find('{'), clean.rfind('}')

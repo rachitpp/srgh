@@ -66,7 +66,7 @@ export function Sidebar({
             <div className="space-y-4">
               {QUERY_GROUPS.map((g) => (
                 <div key={g.label}>
-                  {/* g.color is the metric-domain colour (data), so it stays inline. */}
+                  {/* g.color is the metric-domain colour (data): a CSS var, per-mode. */}
                   <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-foreground px-1 mb-1">
                     <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: g.color }} />
                     {g.label}
@@ -87,26 +87,6 @@ export function Sidebar({
             </div>
           </div>
         )}
-
-        <div className="mt-auto">
-          <div className="rounded-2xl p-4 border border-border bg-brand-soft">
-            <p className="text-xs font-bold text-foreground mb-2.5">Session Info</p>
-            <div className="space-y-1.5 text-xs text-muted-foreground font-mono">
-              <div className="flex justify-between">
-                <span>Engine</span>
-                <span>Gemini · Vertex</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Source</span>
-                <span>{loaded ? loaded.source : "none"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Protocol</span>
-                <span>ISO-15189</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </aside>
     </div>
   );

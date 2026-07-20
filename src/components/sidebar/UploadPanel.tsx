@@ -96,24 +96,24 @@ export function UploadPanel({
         <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-soft">
           <FileSpreadsheet size={14} className="text-brand-soft-foreground" />
         </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-foreground">Upload Dataset</p>
-          <p className="text-xs text-muted-foreground">.xlsx · .xls · .csv</p>
+        {/* min-w-0 + truncate: without them the title wraps to two lines as soon
+            as the Loaded badge and remove button claim their space. */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground truncate">Upload Dataset</p>
         </div>
+        {/* No "Loaded" pill here: the file chip below already carries a tick, the
+            filename and the row count, and the duplicate badge squeezed the title
+            until it truncated. A square target, matching the other icon buttons in
+            the sidebar — a bare glyph gives the pointer almost nothing to land on. */}
         {columns && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xxs font-semibold uppercase tracking-wider text-success bg-success/10 border border-success/20 rounded-full px-2 py-0.5">
-              Loaded
-            </span>
-            <button
-              onClick={clear}
-              aria-label="Remove dataset"
-              title="Remove dataset"
-              className="text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <Trash2 size={13} />
-            </button>
-          </div>
+          <button
+            onClick={clear}
+            aria-label="Remove dataset"
+            title="Remove dataset"
+            className="shrink-0 w-7 h-7 -mr-1.5 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 size={13} />
+          </button>
         )}
       </div>
 
