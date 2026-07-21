@@ -1,0 +1,269 @@
+PROMPT — ENHANCE THE "SGRH LAB AI ASSISTANT" ARCHITECTURE DIAGRAM
+================================================================================
+
+You are given an image of a system-architecture diagram. Redesign it to a higher
+visual standard. Everything below is the context you need: what the system is,
+what every box means, what must stay accurate, and what was deliberately left
+out. Treat the factual content as fixed and the visual design as yours to
+improve.
+
+
+--------------------------------------------------------------------------------
+1. WHAT THE PRODUCT IS
+--------------------------------------------------------------------------------
+
+Name:      SGRH Lab AI Assistant
+Owner:     Sir Ganga Ram Hospital — Information Technology Department
+Audience:  Hospital IT leadership and lab operations management (non-engineers),
+           plus the engineering team. The diagram is shown in slide decks and
+           printed in documents.
+
+What it does: a web dashboard where a lab manager asks a question in plain
+English — "Revenue share of OPD vs IPD patients", "Average turnaround time by
+test", "Cost per sample this quarter" — and gets back a one-sentence finding
+plus charts and tables. It is scoped to Biochemistry Lab operations across four
+metric domains: COST, REVENUE, SERVICE (test volumes) and TAT (turnaround time).
+
+Scale of the live data: 11 tables, 5,217,019 rows in Azure PostgreSQL. The two
+largest tables hold ~1.5M and ~1.02M rows.
+
+
+--------------------------------------------------------------------------------
+2. THE ONE IDEA THE DIAGRAM MUST COMMUNICATE
+--------------------------------------------------------------------------------
+
+Every number shown to a user is computed by the DATABASE across COMPLETE tables
+— never inferred by the language model from a sample of rows.
+
+This is not a stylistic claim; it is the system's defining design decision, and
+it exists because the opposite was tried and failed. An earlier version loaded
+500 rows per table into memory and let the model aggregate those. Asked for the
+OPD vs IPD revenue split, it answered "OPD 61.4%" with total confidence. The
+truth, over all 1,021,711 rows, is the reverse: IPD 59.0%, OPD 41.0%. It had
+seen 0.05% of the data and stated the wrong direction as fact.
+
+So stage 2 ("Aggregate") is the centre of gravity of this diagram. If a viewer
+takes away exactly one thing, it should be that exact figures come from SQL over
+whole tables. Consider giving that stage subtle visual emphasis — but do not
+turn it into a garish highlight; the tone is clinical, not promotional.
+
+
+--------------------------------------------------------------------------------
+3. EXACT CONTENT — REPRODUCE THIS, DO NOT INVENT
+--------------------------------------------------------------------------------
+
+TITLE
+  "SGRH Lab AI Assistant"
+  subtitle: "System Architecture"
+
+BAND — PRESENTATION LAYER  (top centre; the React web app)
+  Card 1  "Chat"          — "Ask questions in plain language"
+  Card 2  "Data Sources"  — "Connect a database or upload a file"
+  Card 3  "Dashboard"     — "Charts, tables, light and dark"
+
+CLOUD — the language model  (top right, visually detached: it is external SaaS)
+  "Azure OpenAI"
+  "gpt-5-mini"
+
+COLUMN — DATA SOURCES  (left)
+  "Azure PostgreSQL"  — "Staging schema" / "11 tables · 5.2M rows"
+  "MySQL"             — "Same connect and load path"
+  "File Upload"       — "CSV and Excel, every sheet"
+
+CENTRE — ANALYSIS ENGINE  (subtitle "FastAPI service")
+  Four numbered stages, left to right, each feeding the next:
+
+  1  Ingest
+     Connect and list tables
+     Load sample rows to learn the structure
+     Record true row counts
+
+  2  Aggregate
+     Every total and breakdown computed in SQL
+     across the complete tables, never a sample
+
+  3  Interpret
+     Lab glossary: cost, revenue, service, TAT
+     Exact figures and the question go to the model
+
+  4  Present
+     One-sentence finding
+     Charts from the same exact figures
+     Full tables, no model
+
+COLUMN — OUTPUTS  (right)
+  "Chat Insight"       — "Grounded in exact figures"
+  "Dashboard Widgets"  — "Bar, pie, line, KPI"
+  "Data Table"         — "Complete, exact rows"
+  "Session Status"     — "Tables, rows, health"
+
+BAND — MCP TOOL SERVER  (bottom)
+  "Exposes the same load and query tools to external AI agents"
+
+CONNECTORS AND THEIR LABELS
+  Data Sources  →  Analysis Engine                     (solid)
+  Analysis Engine  →  Outputs                          (solid)
+  Presentation  →  Engine, labelled "question"         (solid, downward)
+  Engine  →  Presentation, labelled "answer + visuals" (solid, upward)
+  Engine  →  Azure OpenAI, labelled "model call"       (dashed — external network)
+  MCP Tool Server  →  Analysis Engine                  (dashed — same process,
+                                                        shares session state)
+
+The solid/dashed distinction is meaningful: solid is in-system data flow, dashed
+is an external or secondary channel. Preserve it.
+
+
+--------------------------------------------------------------------------------
+4. DELIBERATELY EXCLUDED — DO NOT ADD BACK
+--------------------------------------------------------------------------------
+
+An earlier draft included all of the following and was rejected as noise. This
+diagram answers "what are the parts and how do they talk", not "how is it built":
+
+  - Function names (build_sql_stats_block, coerce_numeric_columns, ...)
+  - Library names (psycopg2, openpyxl, uvicorn, pandas, FastMCP)
+  - Port numbers (:8000, :8001) and endpoint paths (/chat, /table, /upload)
+  - CI pipeline steps, linters, test counts
+  - Environment-variable names, repository URLs, branch names
+  - The nine MCP tool names listed individually
+  - Session-state internals
+
+Also: do NOT add components that do not exist. There is no message queue, no
+cache layer, no vector database, no authentication service, no Kubernetes, no
+load balancer. Adding plausible-looking boxes would make the diagram a lie.
+
+
+--------------------------------------------------------------------------------
+5. DESIGN LANGUAGE TO WORK WITHIN
+--------------------------------------------------------------------------------
+
+The palette is taken from the product's own design tokens so the diagram looks
+like it belongs to the application. Keep these hues; refine their application.
+
+  Ink / primary text     #1F1B18
+  Body text              #4F4842
+  Muted text             #736C65
+  Hairline border        #D9D3CB
+  Panel tint             #F8F6F3   (warm neutral, never cool grey)
+  Surface                #FFFFFF
+
+  Teal    #0A5F67   presentation layer, stage 1, "Service" metric domain
+  Green   #1A7350   data sources, stage 2, "Revenue" metric domain
+  Amber   #8A5F22   MCP, stage 3, "TAT" metric domain
+  Rose    #983B40   stage 4, "Cost" metric domain
+  Blue    #2A5B8C   external model / outputs
+  Blue tint #E4EDF6 cloud fill
+
+The warmth matters: the app ships a "warm graphite" theme, and a cold blue-grey
+diagram would look foreign next to it.
+
+Typography: the current render uses Helvetica only because the renderer was
+limited to core PDF fonts. The product itself uses IBM Plex Sans (UI) and
+IBM Plex Mono (figures). Prefer IBM Plex Sans, or Inter as a close substitute.
+
+Sizing: the current scale runs 42 / 23 / 18 / 15 / 14 px (title / section
+heading / card title / body / caption) on a 1700 × 912 logical canvas, and it
+is too small — see priority 1 in section 6. Every step should go up. Do not
+let anything land below the current 14px caption size; that is now the floor,
+not the target.
+
+Tone: clinical, precise, calm. This is hospital infrastructure documentation,
+not a startup pitch. No gradients-as-decoration, no glow, no 3D, no isometric
+illustration, no stock iconography of robots or brains.
+
+
+--------------------------------------------------------------------------------
+6. WHAT TO IMPROVE
+--------------------------------------------------------------------------------
+
+The current diagram is correct and readable but visually plain. Priorities, in
+order — the first one matters most:
+
+  1. BIGGER TEXT, TIGHTER BOXES. This is the single most important change.
+     The type is too small and the boxes are too loose, so the diagram reads as
+     mostly empty space with tiny labels floating in it. Fix both together:
+
+       - Increase every type size substantially. The body text should be
+         comfortably readable when the diagram is projected or printed at A4,
+         not merely legible when zoomed in. Roughly a 25-40% increase across
+         the scale is the right order of magnitude. Scale headings, card
+         titles, body and captions together so the hierarchy is preserved.
+
+       - Cut the padding between text and the box that contains it. Cards
+         currently have far more internal margin than their content needs,
+         and the four engine stage cards have obvious dead space below their
+         last line of text. Text should sit closer to its border.
+
+       - Cut the gaps between cards, and between cards and the band around
+         them, for the same reason.
+
+     The goal: the same information, in the same layout, at a noticeably
+     larger text size, achieved by reclaiming wasted padding rather than by
+     enlarging the canvas. Boxes should look sized to their content — snug,
+     not cramped and not airy. Keep enough padding that nothing touches a
+     border, but no more than that.
+
+  2. Hierarchy. Four zones (sources / engine / outputs / model) currently carry
+     near-equal visual weight. The engine is the subject and should read first;
+     the model cloud is a dependency, not a peer.
+
+  3. The stage sequence. Four numbered cards with small arrows between them
+     under-sells that this is a pipeline. Consider a stronger flow treatment —
+     but keep the numbering, since it is how people will refer to the stages.
+
+  4. Iconography. Cards are currently identified only by a coloured rule. A
+     restrained, consistent icon set (line icons, single weight, no fills)
+     would help scanning. Icons must be literal and unambiguous: a database
+     cylinder, a document, a chart, a table, a chat bubble. If good icons
+     cannot be made consistent, keep the coloured rules — inconsistent icons
+     are worse than none.
+
+  5. Depth and separation. Everything sits on one flat plane with hairline
+     borders. Very subtle elevation on cards, or a slight tonal step between
+     the page, the bands and the cards, would improve legibility.
+
+  6. Connectors. Arrows are plain lines with triangular heads. They deserve
+     more considered routing, weight and label placement — labels currently
+     float near the lines rather than being clearly attached to them.
+
+  7. Consistency. Internal padding is currently uneven between card types.
+     Establish one spacing scale and apply it everywhere, so equivalent
+     elements are spaced identically.
+
+  8. Print and projection. It must survive being shrunk into a slide, printed
+     in greyscale, and viewed on a projector. Do not rely on colour alone to
+     distinguish anything — the four stages must still be tellable apart in
+     black and white via their numbers and labels.
+
+
+--------------------------------------------------------------------------------
+7. HARD CONSTRAINTS
+--------------------------------------------------------------------------------
+
+  - Every label must stay factually accurate. If a design change would require
+     altering a label's meaning, keep the meaning and change the design.
+  - Single page, landscape, roughly 16:9 to 16:10. It is used as a slide.
+  - Self-contained: no external image, font-CDN or script dependencies. If the
+     output is HTML/SVG, inline everything and embed fonts or fall back to a
+     system stack.
+  - Deliver vector (SVG) if possible, plus a raster export at 2× or greater.
+  - Light background is the primary version. A dark variant is welcome as a
+     second deliverable, not a replacement — the app supports both themes.
+  - The word "SGRH" and the hospital's name must be spelled exactly as given.
+
+
+--------------------------------------------------------------------------------
+8. USEFUL BACKGROUND (context, not content for the diagram)
+--------------------------------------------------------------------------------
+
+  - Frontend: React 18, TypeScript, Vite, Tailwind, Plotly charts, light/dark
+    theming, unit-tested and CI-gated.
+  - Backend: a single FastAPI service. It holds a loaded dataset in memory as a
+    session, exposes REST endpoints to the web app, and runs an MCP server in a
+    background thread so external AI agents can use the same tools.
+  - The model is reached over HTTPS through Azure's OpenAI-compatible endpoint.
+    It never touches the database directly — it receives pre-computed exact
+    figures and returns prose plus chart definitions. This separation is the
+    reason the numbers are trustworthy, and is worth making visually evident.
+  - "OPD" = outpatient, "IPD" = inpatient, "TAT" = turnaround time. These are
+    the domain terms the users think in.

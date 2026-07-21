@@ -11,14 +11,16 @@ export function EmptyState({
   onPrompt: (p: string) => void;
 }) {
   return (
-    <div className="m-auto flex flex-col items-center gap-7 px-6 py-10 text-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm bg-primary-soft">
-          <Microscope size={30} className="text-primary" />
+    // Sized to fit a short viewport without scrolling: the parent scrolls for
+    // real conversations, but having to scroll an *empty* screen reads as broken.
+    <div className="m-auto flex flex-col items-center gap-4 sm:gap-6 px-6 py-6 text-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shadow-sm bg-primary-soft">
+          <Microscope size={24} className="text-primary" />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-foreground tracking-tight">SGRH Lab Assistant</h2>
-          <p className="text-[15px] text-muted-foreground max-w-md leading-relaxed mx-auto">
+        <div className="space-y-1.5">
+          <h2 className="text-xl font-bold text-foreground tracking-tight">SGRH Lab Assistant</h2>
+          <p className="text-sm text-muted-foreground max-w-md leading-relaxed mx-auto">
             {online === false
               ? "Backend offline — start the FastAPI server, then upload a file or connect a database."
               : hasData
@@ -28,11 +30,13 @@ export function EmptyState({
         </div>
       </div>
       {online !== false && (
-        <div className="w-full max-w-lg">
-          <p className="text-2xs font-bold uppercase tracking-widest text-muted-foreground mb-3 text-center">
+        <div className="w-full max-w-lg lg:max-w-3xl">
+          <p className="text-2xs font-bold uppercase tracking-widest text-muted-foreground mb-2.5 text-center">
             {hasData ? "Try asking" : "Example questions"}
           </p>
-          <div className="grid grid-cols-2 gap-2.5">
+          {/* Three columns once there's width for them: six cards in two rows
+              instead of three is the single biggest height saving here. */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
             {FLAT_SUGGESTIONS.slice(0, 6).map(({ q, color, label }) => (
               <button
                 key={q}

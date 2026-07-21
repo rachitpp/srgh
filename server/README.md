@@ -35,7 +35,7 @@ cp .env.example .env      # PowerShell: Copy-Item .env.example .env
 ```
 AZURE_OPENAI_API_KEY=your-azure-key-here
 AZURE_OPENAI_BASE_URL=https://sgrh2.openai.azure.com/openai/v1/
-AZURE_OPENAI_DEPLOYMENT=gpt-5.6-sol
+AZURE_OPENAI_DEPLOYMENT=gpt-5-mini
 ```
 
 > **Base URL:** keep the trailing `/openai/v1/` — the stock `openai` client resolves

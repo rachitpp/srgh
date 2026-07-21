@@ -44,7 +44,15 @@ AZURE_OPENAI_BASE_URL = os.environ.get(
 )
 # Azure routes by *deployment* name, not by model id — this is the name given to
 # the deployment in the Azure portal.
-LLM_DEPLOYMENT = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.6-sol")
+LLM_DEPLOYMENT = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5-mini")
+
+# ── Prompt budget ────────────────────────────────────────────────────────────
+# The model receives a large fixed context with every question, and its size must
+# be bounded by these constants rather than by the shape of the database. This
+# schema has tables with 230-252 columns; unbounded, they produced a 778,000-token
+# prompt — two orders of magnitude past what a small model will accept.
+MAX_GROUP_METRICS = 8   # numeric columns given a per-category breakdown, per table
+SAMPLE_ROWS = 3         # sample rows per table shown to the model, for format only
 
 app.add_middleware(
     CORSMiddleware,
@@ -552,10 +560,12 @@ def build_stats_block(dfs: dict, max_groups: int = 12, max_cat_cols: int = 5) ->
              if 1 < df[c].nunique() <= 30),
             key=lambda c: df[c].nunique(),
         )[:max_cat_cols]
+        metrics = rank_measures([c for c in num_cols if not is_identifier_column(c)],
+                                MAX_GROUP_METRICS)
         for cat in cat_cols:
             vc = df[cat].value_counts().head(max_groups)
             lines.append(f"  {name}: ROW COUNT BY {cat} (top {len(vc)}): {vc.to_dict()}")
-            for ncol in num_cols:
+            for ncol in metrics:
                 try:
                     g = df.groupby(cat)[ncol].sum().sort_values(ascending=False).head(max_groups)
                     pairs = ", ".join(f"{k}={v:.2f}" for k, v in g.items())
@@ -586,6 +596,27 @@ _ID_COLUMN_RE = re.compile(
 def is_identifier_column(name: str) -> bool:
     """True when a numeric column is an identifier rather than a measure."""
     return bool(_ID_COLUMN_RE.search(str(name)))
+
+
+# Names that mark a numeric column as something worth breaking down by category.
+_MEASURE_RE = re.compile(
+    r"amount|revenue|income|cost|price|charge|expense|payment|collection|net|gross|"
+    r"total|sum|qty|quantity|value|rate|margin|discount|tax|hrs|hour|min|day|tat|"
+    r"duration|time|age|count",
+    re.IGNORECASE,
+)
+
+
+def rank_measures(cols, limit):
+    """Pick the numeric columns worth a per-category breakdown, measure-like first.
+
+    The group-by section costs one line per (numeric column x categorical column),
+    so a 250-column table produces thousands of lines and tens of thousands of
+    tokens. Capping the metrics — rather than the categories — keeps every
+    breakdown dimension available while bounding the size.
+    """
+    ranked = sorted(cols, key=lambda c: (0 if _MEASURE_RE.search(str(c)) else 1, list(cols).index(c)))
+    return ranked[:limit]
 
 
 def reset_transaction(conn):
@@ -695,7 +726,8 @@ def build_sql_stats_block(db_type, conn, dfs: dict, max_groups: int = 12,
             # own full scan of the table. MySQL has no GROUPING SETS, so it keeps
             # the one-query-per-category form. Groups are capped at max_distinct,
             # so returning them unlimited and trimming in Python is bounded. ──
-            sums = "".join(f", SUM({quote_column(db_type, c)})" for c in num_cols)
+            metrics = rank_measures(num_cols, MAX_GROUP_METRICS)
+            sums = "".join(f", SUM({quote_column(db_type, c)})" for c in metrics)
             grouped: dict = {}
             if cat_cols and db_type == "postgres":
                 qcats = [quote_column(db_type, c) for c in cat_cols]
@@ -731,7 +763,7 @@ def build_sql_stats_block(db_type, conn, dfs: dict, max_groups: int = 12,
                 rows = rows[:max_groups]
                 counts = {r[0]: int(r[1]) for r in rows}
                 lines.append(f"  {name}: ROW COUNT BY {cat} (top {len(counts)}): {counts}")
-                for i, ncol in enumerate(num_cols):
+                for i, ncol in enumerate(metrics):
                     pairs = [(r[0], r[2 + i]) for r in rows if r[2 + i] is not None]
                     if not pairs:
                         continue
@@ -748,9 +780,15 @@ def build_sql_stats_block(db_type, conn, dfs: dict, max_groups: int = 12,
     return "\n".join(lines)
 
 
-def build_combined_context(dfs: dict, max_rows_per_table: int = 200) -> str:
+def build_combined_context(dfs: dict, max_rows_per_table: int = SAMPLE_ROWS) -> str:
     """Builds one CSV-like text blob covering every loaded table, each tagged
-    with a '### TABLE: name' header so the model can tell them apart."""
+    with a '### TABLE: name' header so the model can tell them apart.
+
+    These rows exist so the model can see column names and value formats. They are
+    NOT a data source — every figure comes from the aggregate block — so a handful
+    of rows does the job. The count matters: at 200 rows this block alone was
+    702,000 tokens, because some tables here carry over 250 columns.
+    """
     parts = []
     for name, df in dfs.items():
         parts.append(f"### TABLE: {name}\n{df.head(max_rows_per_table).to_csv(index=False)}")

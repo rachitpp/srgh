@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="912" viewBox="0 0 1700 912">
+<rect width="1700" height="912" fill="#FFFFFF"/>
+<text x="850.0" y="66.0" font-family="Helvetica-Bold" font-size="42" fill="#1F1B18" text-anchor="middle">SGRH Lab AI Assistant</text>
+<text x="850.0" y="100.0" font-family="Helvetica" font-size="20" fill="#736C65" text-anchor="middle">System Architecture</text>
+<rect x="330.0" y="146.0" width="990.0" height="186.0" rx="16" ry="16" fill="#F8F6F3" stroke="#0A5F67" stroke-width="2.0"/>
+<text x="825.0" y="190.0" font-family="Helvetica-Bold" font-size="23" fill="#0A5F67" text-anchor="middle">Presentation Layer</text>
+<rect x="356.0" y="214.0" width="296.7" height="96.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<rect x="376.0" y="238.0" width="4" height="50" rx="2" fill="#0A5F67"/>
+<text x="392.0" y="254.0" font-family="Helvetica-Bold" font-size="18" fill="#1F1B18" text-anchor="start">Chat</text>
+<text x="392.0" y="282.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">Ask questions in plain language</text>
+<rect x="676.7" y="214.0" width="296.7" height="96.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<rect x="696.7" y="238.0" width="4" height="50" rx="2" fill="#0A5F67"/>
+<text x="712.7" y="254.0" font-family="Helvetica-Bold" font-size="18" fill="#1F1B18" text-anchor="start">Data Sources</text>
+<text x="712.7" y="282.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">Connect a database or upload a file</text>
+<rect x="997.3" y="214.0" width="296.7" height="96.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<rect x="1017.3" y="238.0" width="4" height="50" rx="2" fill="#0A5F67"/>
+<text x="1033.3" y="254.0" font-family="Helvetica-Bold" font-size="18" fill="#1F1B18" text-anchor="start">Dashboard</text>
+<text x="1033.3" y="282.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">Charts, tables, light and dark</text>
+<circle cx="1430" cy="220" r="42" fill="#E4EDF6"/>
+<circle cx="1496" cy="200" r="55" fill="#E4EDF6"/>
+<circle cx="1562" cy="222" r="40" fill="#E4EDF6"/>
+<rect x="1390" y="216" width="220" height="52" rx="26" fill="#E4EDF6"/>
+<text x="1500.0" y="224.0" font-family="Helvetica-Bold" font-size="21" fill="#2A5B8C" text-anchor="middle">Azure OpenAI</text>
+<text x="1500.0" y="250.0" font-family="Helvetica" font-size="15" fill="#2A5B8C" text-anchor="middle">gpt-5-mini</text>
+<rect x="40.0" y="380.0" width="250.0" height="396.0" rx="16" ry="16" fill="#F8F6F3" stroke="#1A7350" stroke-width="2.0"/>
+<text x="165.0" y="424.0" font-family="Helvetica-Bold" font-size="23" fill="#1A7350" text-anchor="middle">Data Sources</text>
+<rect x="58.0" y="446.0" width="214.0" height="96.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<rect x="76.0" y="470.0" width="4" height="48" rx="2" fill="#1A7350"/>
+<text x="92.0" y="486.0" font-family="Helvetica-Bold" font-size="17" fill="#1F1B18" text-anchor="start">Azure PostgreSQL</text>
+<text x="92.0" y="510.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">Staging schema</text>
+<text x="92.0" y="532.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">11 tables · 5.2M rows</text>
+<rect x="58.0" y="556.0" width="214.0" height="96.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<rect x="76.0" y="580.0" width="4" height="48" rx="2" fill="#1A7350"/>
+<text x="92.0" y="596.0" font-family="Helvetica-Bold" font-size="17" fill="#1F1B18" text-anchor="start">MySQL</text>
+<text x="92.0" y="620.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">Same connect and</text>
+<text x="92.0" y="642.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">load path</text>
+<rect x="58.0" y="666.0" width="214.0" height="96.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<rect x="76.0" y="690.0" width="4" height="48" rx="2" fill="#1A7350"/>
+<text x="92.0" y="706.0" font-family="Helvetica-Bold" font-size="17" fill="#1F1B18" text-anchor="start">File Upload</text>
+<text x="92.0" y="730.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">CSV and Excel,</text>
+<text x="92.0" y="752.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">every sheet</text>
+<rect x="330.0" y="380.0" width="990.0" height="396.0" rx="16" ry="16" fill="#F8F6F3" stroke="#1F1B18" stroke-width="2.0"/>
+<text x="825.0" y="424.0" font-family="Helvetica-Bold" font-size="23" fill="#1F1B18" text-anchor="middle">Analysis Engine</text>
+<text x="825.0" y="450.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="middle">FastAPI service</text>
+<rect x="350.0" y="474.0" width="224.0" height="246.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<circle cx="380.0" cy="510" r="16" fill="#0A5F67"/>
+<text x="380.0" y="516.0" font-family="Helvetica-Bold" font-size="16" fill="#FFFFFF" text-anchor="middle">1</text>
+<text x="406.0" y="516.0" font-family="Helvetica-Bold" font-size="18" fill="#1F1B18" text-anchor="start">Ingest</text>
+<line x1="370.0" y1="538.0" x2="554.0" y2="538.0" stroke="#D9D3CB" stroke-width="1"/>
+<text x="370.0" y="572.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">Connect and list tables</text>
+<text x="370.0" y="597.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">Load sample rows to</text>
+<text x="370.0" y="622.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">learn the structure</text>
+<text x="370.0" y="647.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">Record true row counts</text>
+<line x1="576.0" y1="597.0" x2="590.0" y2="597.0" stroke="#1F1B18" stroke-width="1.9"/>
+<polygon points="590.0,597 581.0,591.6 581.0,602.4" fill="#1F1B18"/>
+<rect x="592.0" y="474.0" width="224.0" height="246.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<circle cx="622.0" cy="510" r="16" fill="#1A7350"/>
+<text x="622.0" y="516.0" font-family="Helvetica-Bold" font-size="16" fill="#FFFFFF" text-anchor="middle">2</text>
+<text x="648.0" y="516.0" font-family="Helvetica-Bold" font-size="18" fill="#1F1B18" text-anchor="start">Aggregate</text>
+<line x1="612.0" y1="538.0" x2="796.0" y2="538.0" stroke="#D9D3CB" stroke-width="1"/>
+<text x="612.0" y="572.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">Every total and</text>
+<text x="612.0" y="597.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">breakdown computed in</text>
+<text x="612.0" y="622.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">SQL across the complete</text>
+<text x="612.0" y="647.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">tables, never a sample</text>
+<line x1="818.0" y1="597.0" x2="832.0" y2="597.0" stroke="#1F1B18" stroke-width="1.9"/>
+<polygon points="832.0,597 823.0,591.6 823.0,602.4" fill="#1F1B18"/>
+<rect x="834.0" y="474.0" width="224.0" height="246.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<circle cx="864.0" cy="510" r="16" fill="#8A5F22"/>
+<text x="864.0" y="516.0" font-family="Helvetica-Bold" font-size="16" fill="#FFFFFF" text-anchor="middle">3</text>
+<text x="890.0" y="516.0" font-family="Helvetica-Bold" font-size="18" fill="#1F1B18" text-anchor="start">Interpret</text>
+<line x1="854.0" y1="538.0" x2="1038.0" y2="538.0" stroke="#D9D3CB" stroke-width="1"/>
+<text x="854.0" y="572.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">Lab glossary: cost,</text>
+<text x="854.0" y="597.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">revenue, service, TAT</text>
+<text x="854.0" y="622.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">Exact figures and the</text>
+<text x="854.0" y="647.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">question go to the model</text>
+<line x1="1060.0" y1="597.0" x2="1074.0" y2="597.0" stroke="#1F1B18" stroke-width="1.9"/>
+<polygon points="1074.0,597 1065.0,591.6 1065.0,602.4" fill="#1F1B18"/>
+<rect x="1076.0" y="474.0" width="224.0" height="246.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<circle cx="1106.0" cy="510" r="16" fill="#983B40"/>
+<text x="1106.0" y="516.0" font-family="Helvetica-Bold" font-size="16" fill="#FFFFFF" text-anchor="middle">4</text>
+<text x="1132.0" y="516.0" font-family="Helvetica-Bold" font-size="18" fill="#1F1B18" text-anchor="start">Present</text>
+<line x1="1096.0" y1="538.0" x2="1280.0" y2="538.0" stroke="#D9D3CB" stroke-width="1"/>
+<text x="1096.0" y="572.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">One-sentence finding</text>
+<text x="1096.0" y="597.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">Charts from the same</text>
+<text x="1096.0" y="622.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">exact figures</text>
+<text x="1096.0" y="647.0" font-family="Helvetica" font-size="14.5" fill="#4F4842" text-anchor="start">Full tables, no model</text>
+<rect x="1360.0" y="380.0" width="300.0" height="396.0" rx="16" ry="16" fill="#F8F6F3" stroke="#2A5B8C" stroke-width="2.0"/>
+<text x="1510.0" y="424.0" font-family="Helvetica-Bold" font-size="23" fill="#2A5B8C" text-anchor="middle">Outputs</text>
+<rect x="1378.0" y="446.0" width="264.0" height="70.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<rect x="1396.0" y="464.0" width="4" height="34" rx="2" fill="#0A5F67"/>
+<text x="1412.0" y="478.0" font-family="Helvetica-Bold" font-size="16.5" fill="#1F1B18" text-anchor="start">Chat Insight</text>
+<text x="1412.0" y="501.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">Grounded in exact figures</text>
+<rect x="1378.0" y="528.0" width="264.0" height="70.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<rect x="1396.0" y="546.0" width="4" height="34" rx="2" fill="#1A7350"/>
+<text x="1412.0" y="560.0" font-family="Helvetica-Bold" font-size="16.5" fill="#1F1B18" text-anchor="start">Dashboard Widgets</text>
+<text x="1412.0" y="583.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">Bar, pie, line, KPI</text>
+<rect x="1378.0" y="610.0" width="264.0" height="70.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<rect x="1396.0" y="628.0" width="4" height="34" rx="2" fill="#8A5F22"/>
+<text x="1412.0" y="642.0" font-family="Helvetica-Bold" font-size="16.5" fill="#1F1B18" text-anchor="start">Data Table</text>
+<text x="1412.0" y="665.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">Complete, exact rows</text>
+<rect x="1378.0" y="692.0" width="264.0" height="70.0" rx="12" ry="12" fill="#FFFFFF" stroke="#D9D3CB" stroke-width="1.4"/>
+<rect x="1396.0" y="710.0" width="4" height="34" rx="2" fill="#983B40"/>
+<text x="1412.0" y="724.0" font-family="Helvetica-Bold" font-size="16.5" fill="#1F1B18" text-anchor="start">Session Status</text>
+<text x="1412.0" y="747.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">Tables, rows, health</text>
+<rect x="330.0" y="812.0" width="990.0" height="84.0" rx="16" ry="16" fill="#F8F6F3" stroke="#8A5F22" stroke-width="2.0"/>
+<text x="362.0" y="848.0" font-family="Helvetica-Bold" font-size="19" fill="#8A5F22" text-anchor="start">MCP Tool Server</text>
+<text x="362.0" y="874.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">Exposes the same load and query tools to external AI agents</text>
+<line x1="296.0" y1="580.0" x2="322.0" y2="580.0" stroke="#1F1B18" stroke-width="2.2"/>
+<polygon points="322,580 313,574.6 313,585.4" fill="#1F1B18"/>
+<line x1="1326.0" y1="580.0" x2="1352.0" y2="580.0" stroke="#1F1B18" stroke-width="2.2"/>
+<polygon points="1352,580 1343,574.6 1343,585.4" fill="#1F1B18"/>
+<line x1="786.0" y1="340.0" x2="786.0" y2="372.0" stroke="#0A5F67" stroke-width="2.1"/>
+<polygon points="786,372 780.6,363 791.4,363" fill="#0A5F67"/>
+<line x1="866.0" y1="372.0" x2="866.0" y2="340.0" stroke="#0A5F67" stroke-width="2.1"/>
+<polygon points="866,340 860.6,349 871.4,349" fill="#0A5F67"/>
+<text x="770.0" y="354.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="end">question</text>
+<text x="882.0" y="354.0" font-family="Helvetica" font-size="14" fill="#736C65" text-anchor="start">answer + visuals</text>
+<line x1="1320.0" y1="396.0" x2="1428.0" y2="284.0" stroke="#2A5B8C" stroke-width="2.0" stroke-dasharray="7,5"/>
+<polygon points="1428,284 1422.6,293 1433.4,293" fill="#2A5B8C"/>
+<text x="1318.0" y="354.0" font-family="Helvetica" font-size="14" fill="#2A5B8C" text-anchor="end">model call</text>
+<line x1="720.0" y1="806.0" x2="720.0" y2="784.0" stroke="#8A5F22" stroke-width="1.9" stroke-dasharray="7,5"/>
+<polygon points="720,784 714.6,793 725.4,793" fill="#8A5F22"/>
+</svg>
