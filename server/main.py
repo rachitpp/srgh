@@ -22,6 +22,17 @@ try:
 except ImportError:
     pass
 
+# Windows consoles default to a legacy codepage (cp1252), which cannot encode '₹'
+# or any non-Latin-1 character. A debug print of a model response containing one
+# then raises UnicodeEncodeError *inside* the request handler, turning a correct
+# answer into an error response. Degrade unencodable characters instead of raising.
+try:
+    import sys
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 app = FastAPI()
 
 # ── Configuration (env-driven) ───────────────────────────────────────────────
@@ -164,8 +175,8 @@ def query_data(question: str) -> str:
     prompt = f"""You are a precise data analyst working across multiple database tables.
 {LAB_DOMAIN_CONTEXT}
 
-PRE-COMPUTED EXACT STATS (computed in Python over the FULL data — use these, never recalculate):
-{build_stats_block(dfs)}
+PRE-COMPUTED EXACT STATS (computed over the FULL data — use these, never recalculate):
+{session_data.get("sql_stats") or build_stats_block(dfs)}
 
 SAMPLE ROWS (first rows of each table for schema reference — do NOT aggregate from these):
 {context}
@@ -190,6 +201,8 @@ def load_mysql_table(host: str, port: int, user: str, password: str,
         )
         n = max(1, min(limit, 2000))
         df = coerce_numeric_columns(pd.read_sql(f"SELECT * FROM `{table}` LIMIT {n}", conn))
+        stats = build_sql_stats_block("mysql", conn, {table: df})
+        counts = sql_row_counts("mysql", conn, [table])
         conn.close()
 
         session_data["dfs"] = {table: df}
@@ -197,8 +210,10 @@ def load_mysql_table(host: str, port: int, user: str, password: str,
         session_data["active_table_name"] = table
         session_data["csv_context"] = build_combined_context({table: df})
         session_data["active_source"] = "db"
+        session_data["sql_stats"] = stats
+        session_data["row_counts"] = counts
         return (
-            f"Loaded `{table}` — {len(df)} rows, "
+            f"Loaded `{table}` — {counts.get(table, len(df))} rows, "
             f"columns: {', '.join(df.columns.tolist())}"
         )
     except MySQLError as e:
@@ -239,6 +254,8 @@ def load_postgres_table(host: str, port: int, user: str, password: str,
         n = max(1, min(limit, 2000))
         table_ident = quote_identifier("postgres", table)
         df = coerce_numeric_columns(pd.read_sql(f'SELECT * FROM {table_ident} LIMIT {n}', conn))
+        stats = build_sql_stats_block("postgres", conn, {table: df})
+        counts = sql_row_counts("postgres", conn, [table])
         conn.close()
 
         session_data["dfs"] = {table: df}
@@ -246,8 +263,10 @@ def load_postgres_table(host: str, port: int, user: str, password: str,
         session_data["active_table_name"] = table
         session_data["csv_context"] = build_combined_context({table: df})
         session_data["active_source"] = "db"
+        session_data["sql_stats"] = stats
+        session_data["row_counts"] = counts
         return (
-            f"Loaded `{table}` — {len(df)} rows, "
+            f"Loaded `{table}` — {counts.get(table, len(df))} rows, "
             f"columns: {', '.join(df.columns.tolist())}"
         )
     except PostgresError as e:
@@ -304,17 +323,24 @@ def load_all_mysql_tables(host: str, port: int, user: str, password: str,
                 dfs[t] = coerce_numeric_columns(pd.read_sql(f"SELECT * FROM {ident} LIMIT {limit}", conn))
             except Exception as e:
                 print(f"Skipping {t}: {e}")
+                reset_transaction(conn)
                 continue
-        conn.close()
 
         if not dfs:
+            conn.close()
             return "Found tables but failed to load any of them."
+
+        stats = build_sql_stats_block("mysql", conn, dfs)
+        counts = sql_row_counts("mysql", conn, list(dfs.keys()))
+        conn.close()
 
         session_data["dfs"] = dfs
         session_data["df"] = next(iter(dfs.values()))
         session_data["active_table_name"] = next(iter(dfs.keys()))
         session_data["csv_context"] = build_combined_context(dfs)
         session_data["active_source"] = "db"
+        session_data["sql_stats"] = stats
+        session_data["row_counts"] = counts
         return f"Loaded {len(dfs)} tables: {', '.join(dfs.keys())}"
     except MySQLError as e:
         return f"Error: {str(e)}"
@@ -345,17 +371,24 @@ def load_all_postgres_tables(host: str, port: int, user: str, password: str,
                 dfs[t] = coerce_numeric_columns(pd.read_sql(f"SELECT * FROM {ident} LIMIT {limit}", conn))
             except Exception as e:
                 print(f"Skipping {t}: {e}")
+                reset_transaction(conn)
                 continue
-        conn.close()
 
         if not dfs:
+            conn.close()
             return "Found tables but failed to load any of them."
+
+        stats = build_sql_stats_block("postgres", conn, dfs)
+        counts = sql_row_counts("postgres", conn, list(dfs.keys()))
+        conn.close()
 
         session_data["dfs"] = dfs
         session_data["df"] = next(iter(dfs.values()))
         session_data["active_table_name"] = next(iter(dfs.keys()))
         session_data["csv_context"] = build_combined_context(dfs)
         session_data["active_source"] = "db"
+        session_data["sql_stats"] = stats
+        session_data["row_counts"] = counts
         return f"Loaded {len(dfs)} tables: {', '.join(dfs.keys())}"
     except PostgresError as e:
         return f"Error: {str(e)}"
@@ -402,6 +435,11 @@ session_data: dict = {
     "csv_context": "",
     "active_source": None,
     "active_table_name": None,
+    # Exact aggregates computed by the DB over full tables. Empty for uploads,
+    # where the in-memory DataFrame *is* the full dataset and pandas suffices.
+    "sql_stats": "",
+    # True COUNT(*) per table — the sampled DataFrame's len() is not the row count.
+    "row_counts": {},
 }
 
 
@@ -524,6 +562,189 @@ def build_stats_block(dfs: dict, max_groups: int = 12, max_cat_cols: int = 5) ->
                     lines.append(f"  {name}: SUM OF {ncol} BY {cat}: {pairs}")
                 except Exception:
                     continue
+    return "\n".join(lines)
+
+
+def quote_column(db_type, name):
+    """Quotes a bare column name per dialect. Doubles any embedded quote char so
+    a column like `it"s` can't terminate the identifier early."""
+    if db_type == "postgres":
+        return '"' + name.replace('"', '""') + '"'
+    return "`" + name.replace("`", "``") + "`"
+
+
+# Numeric columns whose name marks them as keys/identifiers. Summing DIM_Patient or
+# OrderItem_RowId produces a large, authoritative-looking, meaningless number — and
+# every such column also multiplies the size of the group-by section of the prompt.
+_ID_COLUMN_RE = re.compile(
+    r"(^|_)(id|ids|uid|guid|rowid|row_id|code|codes|key|keys|ref|no|num|number|"
+    r"episode|dim|counter|flag|year|month|day)($|_)",
+    re.IGNORECASE,
+)
+
+
+def is_identifier_column(name: str) -> bool:
+    """True when a numeric column is an identifier rather than a measure."""
+    return bool(_ID_COLUMN_RE.search(str(name)))
+
+
+def reset_transaction(conn):
+    """Clear a failed transaction so the connection stays usable.
+
+    Postgres aborts the whole transaction on any error and then rejects every
+    later statement with 'current transaction is aborted'. Loading a database
+    that contains even one unreadable table (a `cron.*` catalog, a view the role
+    can't select) would otherwise poison every aggregate that follows it — and
+    silently, since each one fails inside its own except-branch."""
+    try:
+        conn.rollback()
+    except Exception:
+        pass
+
+
+def sql_row_counts(db_type, conn, tables: list) -> dict:
+    """True COUNT(*) per table, so the UI reports the dataset size rather than the
+    size of the sample that was pulled into memory."""
+    counts = {}
+    for t in tables:
+        cur = conn.cursor()
+        try:
+            cur.execute(f"SELECT COUNT(*) FROM {quote_identifier(db_type, t)}")
+            counts[t] = int(cur.fetchone()[0])
+        except Exception:
+            counts[t] = 0
+            reset_transaction(conn)
+        finally:
+            cur.close()
+    return counts
+
+
+def build_sql_stats_block(db_type, conn, dfs: dict, max_groups: int = 12,
+                          max_cat_cols: int = 5, max_distinct: int = 30) -> str:
+    """The SQL counterpart to build_stats_block: identical output format, but every
+    aggregate is computed by the database over the ENTIRE table rather than over the
+    sampled DataFrame held in memory.
+
+    This exists because the sample is a `LIMIT n` slice with no ORDER BY — an
+    arbitrary, and in practice strongly biased, subset. Aggregating it produced
+    confidently-stated answers that were simply wrong (a revenue split came out
+    61/39 on the first 500 rows and 38/62 over the full 20k).
+
+    Column *roles* are still inferred from the sample (dtype after
+    coerce_numeric_columns), which avoids mapping every dialect's type names; only
+    the numbers come from SQL. Cardinality is re-checked in SQL because a sample
+    routinely understates it.
+    """
+    lines = []
+    for name, sample in dfs.items():
+        ident = quote_identifier(db_type, name)
+        cur = conn.cursor()
+        try:
+            cur.execute(f"SELECT COUNT(*) FROM {ident}")
+            total_rows = int(cur.fetchone()[0])
+            lines.append(f"TABLE {name} — ROWS: {total_rows}")
+            if total_rows == 0:
+                continue
+
+            num_cols = [c for c in sample.select_dtypes(include="number").columns
+                        if not is_identifier_column(c)]
+            txt_cols = list(sample.select_dtypes(exclude="number").columns)
+
+            # ── Per-column totals: one round trip for every numeric column ──
+            if num_cols:
+                sel = ", ".join(
+                    f"SUM({quote_column(db_type, c)}), AVG({quote_column(db_type, c)}), "
+                    f"MIN({quote_column(db_type, c)}), MAX({quote_column(db_type, c)})"
+                    for c in num_cols
+                )
+                cur.execute(f"SELECT {sel} FROM {ident}")
+                row = cur.fetchone()
+                for i, c in enumerate(num_cols):
+                    s, a, mn, mx = row[i * 4:i * 4 + 4]
+                    if s is None:
+                        continue  # column is entirely NULL
+                    lines.append(
+                        f"  {name}.{c}: SUM={float(s):.4f}, MEAN={float(a):.4f}, "
+                        f"MIN={float(mn):.4f}, MAX={float(mx):.4f}"
+                    )
+
+            # ── Pick group-by columns by true distinct count, cheapest first ──
+            # Prefilter on the sample: a column with more than max_distinct values
+            # in a subset necessarily has more in the whole table, so discarding it
+            # here can't lose a real candidate — and it keeps a 103-column table
+            # from costing 103 COUNT(DISTINCT) scans of a million rows.
+            txt_cols = [c for c in txt_cols
+                        if 1 < sample[c].nunique(dropna=True) <= max_distinct]
+            cardinality = []
+            if txt_cols:
+                # All cardinalities in ONE query: k separate COUNT(DISTINCT)
+                # statements would each scan the table independently.
+                sel = ", ".join(f"COUNT(DISTINCT {quote_column(db_type, c)})" for c in txt_cols)
+                try:
+                    cur.execute(f"SELECT {sel} FROM {ident}")
+                    row = cur.fetchone()
+                    cardinality = [(int(n), c) for c, n in zip(txt_cols, row)
+                                   if n is not None and 1 < int(n) <= max_distinct]
+                except Exception as e:
+                    print(f"Cardinality probe failed on {name}: {e}")
+                    reset_transaction(conn)
+            cat_cols = [c for _, c in sorted(cardinality)[:max_cat_cols]]
+
+            # ── Every breakdown in a single pass. GROUPING SETS computes all the
+            # category group-bys in one scan; without it each category costs its
+            # own full scan of the table. MySQL has no GROUPING SETS, so it keeps
+            # the one-query-per-category form. Groups are capped at max_distinct,
+            # so returning them unlimited and trimming in Python is bounded. ──
+            sums = "".join(f", SUM({quote_column(db_type, c)})" for c in num_cols)
+            grouped: dict = {}
+            if cat_cols and db_type == "postgres":
+                qcats = [quote_column(db_type, c) for c in cat_cols]
+                flags = ", ".join(f"GROUPING({q})" for q in qcats)
+                sets = ", ".join(f"({q})" for q in qcats)
+                cur.execute(
+                    f"SELECT {', '.join(qcats)}, {flags}, COUNT(*){sums} "
+                    f"FROM {ident} GROUP BY GROUPING SETS ({sets})"
+                )
+                k = len(cat_cols)
+                for r in cur.fetchall():
+                    # Exactly one GROUPING flag is 0 per row: that's the active column.
+                    active = next((i for i in range(k) if r[k + i] == 0), None)
+                    if active is None:
+                        continue
+                    grouped.setdefault(cat_cols[active], []).append(
+                        (r[active],) + tuple(r[2 * k:])
+                    )
+            else:
+                for cat in cat_cols:
+                    qcat = quote_column(db_type, cat)
+                    cur.execute(
+                        f"SELECT {qcat}, COUNT(*){sums} FROM {ident} "
+                        f"GROUP BY {qcat} ORDER BY COUNT(*) DESC LIMIT {max_groups}"
+                    )
+                    grouped[cat] = list(cur.fetchall())
+
+            for cat in cat_cols:
+                rows = grouped.get(cat) or []
+                if not rows:
+                    continue
+                rows.sort(key=lambda r: int(r[1]), reverse=True)
+                rows = rows[:max_groups]
+                counts = {r[0]: int(r[1]) for r in rows}
+                lines.append(f"  {name}: ROW COUNT BY {cat} (top {len(counts)}): {counts}")
+                for i, ncol in enumerate(num_cols):
+                    pairs = [(r[0], r[2 + i]) for r in rows if r[2 + i] is not None]
+                    if not pairs:
+                        continue
+                    pairs.sort(key=lambda kv: float(kv[1]), reverse=True)
+                    joined = ", ".join(f"{k}={float(v):.2f}" for k, v in pairs)
+                    lines.append(f"  {name}: SUM OF {ncol} BY {cat}: {joined}")
+        except Exception as e:
+            # A single unreadable table must not sink the whole load; the caller
+            # falls back to the in-memory block for anything missing here.
+            print(f"SQL stats unavailable for {name}: {e}")
+            reset_transaction(conn)
+        finally:
+            cur.close()
     return "\n".join(lines)
 
 
@@ -706,6 +927,8 @@ async def db_load_table(query: DBQuery):
         limit = max(1, min(query.limit or 500, 2000))
         table_ident = quote_identifier(query.db_type, query.table)
         df = coerce_numeric_columns(pd.read_sql(f"SELECT * FROM {table_ident} LIMIT {limit}", conn))
+        sql_stats = build_sql_stats_block(query.db_type, conn, {query.table: df})
+        row_counts = sql_row_counts(query.db_type, conn, [query.table])
         conn.close()
 
         session_data["dfs"] = {query.table: df}
@@ -713,10 +936,12 @@ async def db_load_table(query: DBQuery):
         session_data["active_table_name"] = query.table
         session_data["csv_context"] = build_combined_context({query.table: df})
         session_data["active_source"] = "db"
+        session_data["sql_stats"] = sql_stats
+        session_data["row_counts"] = row_counts
         return {
-            "message": f"Loaded {len(df)} rows from `{query.table}`",
+            "message": f"Loaded {row_counts.get(query.table, len(df))} rows from `{query.table}`",
             "columns": list(df.columns),
-            "row_count": len(df),
+            "row_count": row_counts.get(query.table, len(df)),
         }
     except (MySQLError, PostgresError) as e:
         return {"error": str(e)}
@@ -750,19 +975,27 @@ async def db_load_all_tables(query: DBLoadAll):
             except Exception as e:
                 failed.append(t)
                 print(f"Skipping {t}: {e}")
+                reset_transaction(conn)
                 continue
-        conn.close()
 
         if not dfs:
+            conn.close()
             return {"error": "Found tables but failed to load any of them."}
+
+        # Aggregate in SQL before dropping the connection: the DataFrames above are
+        # only a LIMITed sample, so any total derived from them would be wrong.
+        sql_stats = build_sql_stats_block(query.db_type, conn, dfs)
+        row_counts = sql_row_counts(query.db_type, conn, list(dfs.keys()))
+        conn.close()
 
         session_data["dfs"] = dfs
         session_data["df"] = next(iter(dfs.values()))
         session_data["active_table_name"] = next(iter(dfs.keys()))
         session_data["csv_context"] = build_combined_context(dfs)
         session_data["active_source"] = "db"
+        session_data["sql_stats"] = sql_stats
+        session_data["row_counts"] = row_counts
 
-        row_counts = {name: len(df) for name, df in dfs.items()}
         return {
             "message": f"Loaded {len(dfs)} tables ({sum(row_counts.values())} total rows).",
             "tables": list(dfs.keys()),
@@ -817,6 +1050,10 @@ async def upload_file(file: UploadFile = File(...)):
     session_data["active_source"] = "file"
 
     row_counts = {name: int(len(df)) for name, df in dfs.items()}
+    # An upload holds every row in memory, so pandas is already exact — and any
+    # SQL stats left over from a previous DB session describe different data.
+    session_data["sql_stats"] = ""
+    session_data["row_counts"] = row_counts
     active_df = session_data["df"]
     return {
         "message": "Success",
@@ -843,7 +1080,11 @@ async def chat(message: str = Form(...)):
     if df is None or df.empty or not context:
         return {"text": "Please upload a file or load a database table first.", "visuals": []}
 
-    stats_block = build_stats_block(dfs if dfs else {session_data.get("active_table_name") or "data": df})
+    # SQL stats cover the full table; the pandas block only covers what's in memory,
+    # so it is the fallback for uploads (where those are the same thing).
+    stats_block = session_data.get("sql_stats") or build_stats_block(
+        dfs if dfs else {session_data.get("active_table_name") or "data": df}
+    )
 
     prompt = f"""
 You are an expert Laboratory Performance Analyst and Power BI Copilot, specializing in

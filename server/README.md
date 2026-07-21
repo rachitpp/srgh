@@ -3,7 +3,7 @@
 FastAPI service that powers the BioLab AI dashboard. It parses uploaded files / connects
 to MySQL or PostgreSQL, keeps the loaded tables in memory, and answers questions two ways:
 
-- **`/chat`** — Gemini (via Vertex AI) returns a JSON insight + HTML visuals (KPI cards, Plotly bar/pie/line).
+- **`/chat`** — Azure OpenAI returns a JSON insight + HTML visuals (KPI cards, Plotly bar/pie/line).
 - **`/table`** — deterministic: returns the requested rows as an HTML table (full lists, exact — no LLM cap).
 
 An **MCP server** (SSE) also runs on port **8001** exposing the same query/DB tools.
@@ -11,7 +11,7 @@ An **MCP server** (SSE) also runs on port **8001** exposing the same query/DB to
 ## 1. Prerequisites
 
 - Python 3.10+
-- A Google Cloud service-account JSON key with **Vertex AI** enabled.
+- An **Azure OpenAI** resource with a model deployment, plus its API key and endpoint.
 
 ## 2. Setup
 
@@ -26,22 +26,24 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Put your service-account key in this folder, then copy `.env.example` to `.env` and edit it:
+Copy `.env.example` to `.env` and fill it in:
 
 ```bash
 cp .env.example .env      # PowerShell: Copy-Item .env.example .env
 ```
 
 ```
-GOOGLE_APPLICATION_CREDENTIALS=./your-key.json
-GCP_PROJECT=your-project-id
-GCP_LOCATION=global
-GEMINI_MODEL=gemini-3.5-flash
+AZURE_OPENAI_API_KEY=your-azure-key-here
+AZURE_OPENAI_BASE_URL=https://sgrh2.openai.azure.com/openai/v1/
+AZURE_OPENAI_DEPLOYMENT=gpt-5.6-sol
 ```
 
-> **Model note:** `GEMINI_MODEL` defaults to `gemini-3.5-flash` to match the original project.
-> If a request fails with a **404 "model not found"**, set it to a valid id such as
-> `gemini-2.5-flash` or `gemini-2.0-flash`.
+> **Base URL:** keep the trailing `/openai/v1/` — the stock `openai` client resolves
+> endpoints relative to it, and dropping it yields 404s.
+>
+> **Deployment vs. model:** Azure routes by the *deployment* name you chose in the portal,
+> which need not match the underlying model id. A **404 "deployment not found"** means this
+> value is wrong.
 
 ## 3. Run
 
@@ -79,8 +81,7 @@ Then run the frontend from the project root: `npm run dev`.
 
 Only portability tweaks (behaviour is identical when no env vars are set):
 
-1. Credentials path, `GCP_PROJECT`, `GCP_LOCATION`, and the model id are read from environment
-   variables, defaulting to the original hard-coded values.
-2. Added optional `.env` loading via `python-dotenv`.
-3. Removed the unused, shadowed `import google.generativeai as genai` (the active SDK is
-   `from google import genai`).
+1. The LLM backend is Azure OpenAI (stock `openai` client against Azure's OpenAI-compatible
+   `/openai/v1/` surface) instead of Gemini on Vertex AI.
+2. Key, base URL, and deployment name are read from environment variables.
+3. Added optional `.env` loading via `python-dotenv`.

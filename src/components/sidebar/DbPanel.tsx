@@ -7,9 +7,12 @@ import { NetworkError, dbConnect, dbLoadAllTables, errorMessage } from "../../ap
 export function DbPanel({
   onLoaded,
   onStatusChange,
+  hasData = false,
 }: {
   onLoaded: (i: LoadedInfo) => void;
   onStatusChange: (s: DbStatus) => void;
+  /** A dataset is already loaded, so there is nothing left to load. */
+  hasData?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<DbStatus>("disconnected");
@@ -17,12 +20,16 @@ export function DbPanel({
   const [error, setError] = useState<string | null>(null);
   const [loadingAll, setLoadingAll] = useState(false);
   const [cfg, setCfg] = useState<DbConfig>({
-    db_type: "mysql",
-    host: "localhost",
-    port: "3306",
-    user: "",
-    password: "",
-    database: "",
+    db_type: "postgres",
+    // Azure calls this the "server name"; it is the plain DNS host — no scheme
+    // and no trailing slash, which the drivers would reject.
+    host: "postgres-sgrh.postgres.database.azure.com",
+    port: "5432",
+    user: "dcminfotech",
+    password: "dcminfotech#2026@$GRH!02",
+    // The `Staging` schema needs no field here: the backend lists every
+    // non-system schema and returns tables schema-qualified ("Staging.orders").
+    database: "postgres",
   });
 
   function setStat(s: DbStatus) {
@@ -156,7 +163,7 @@ export function DbPanel({
             {(
               [
                 { label: "Database", key: "database" },
-                { label: "Host", key: "host" },
+                { label: "Server Name", key: "host" },
                 { label: "Port", key: "port" },
                 { label: "User", key: "user" },
                 { label: "Password", key: "password", type: "password" },
@@ -205,7 +212,7 @@ export function DbPanel({
               {status === "connecting" && <Loader2 size={13} className="animate-spin" />}
               {status === "connecting" ? "Connecting…" : status === "connected" ? "Reconnect" : "Connect"}
             </button>
-            {status === "connected" && (
+            {status === "connected" && !hasData && (
               <button
                 onClick={() => void loadAll()}
                 disabled={loadingAll}

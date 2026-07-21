@@ -54,7 +54,7 @@ export function Sidebar({
           </p>
           <div className="space-y-3">
             <UploadPanel onLoaded={onLoaded} onCleared={onCleared} />
-            <DbPanel onLoaded={onLoaded} onStatusChange={onDbStatusChange} />
+            <DbPanel onLoaded={onLoaded} onStatusChange={onDbStatusChange} hasData={hasData} />
           </div>
         </div>
 

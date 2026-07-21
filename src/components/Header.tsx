@@ -1,8 +1,9 @@
-import { FlaskConical, LayoutDashboard, MessageSquare, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, MessageSquare, Moon, Sun } from "lucide-react";
 import type { DbStatus, LoadedInfo } from "../types";
 import { cn } from "../lib/utils";
 import { useThemeMode } from "../lib/theme-mode";
 import { ViewTab } from "./ViewTab";
+import sgrhLogo from "../assets/sgrh-logo.png";
 
 interface HeaderProps {
   view: "chat" | "dashboard";
@@ -48,15 +49,14 @@ export function Header({ view, onViewChange, widgetCount, online, loaded, dbStat
 
   return (
     <header className="relative z-20 shrink-0 border-b border-border bg-card flex items-center justify-between px-6 h-16 shadow-sm">
-      <div className="flex items-center gap-3.5">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-brand">
-          <FlaskConical size={16} className="text-brand-foreground" />
-        </div>
-        <div>
-          <span className="text-[17px] font-bold tracking-tight text-foreground">
-            SGRH Lab Assistant
-          </span>
-        </div>
+      {/* The logo artwork is dark ink on white, so it keeps its own white plate in
+          both themes rather than disappearing against the dark surface. */}
+      <div className="flex items-center">
+        <img
+          src={sgrhLogo}
+          alt="Sir Ganga Ram Hospital — Information Technology Department"
+          className="h-9 w-auto rounded-lg bg-white px-2 py-1 object-contain"
+        />
       </div>
 
       <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
